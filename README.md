@@ -27,8 +27,24 @@ Open with iPhone Safari or Android Chrome:
 
 Then: **Share → Add to Home Screen** for full-screen experience.
 
-> ⚠️ App 中預設顯示之紀錄為預設範例資料，請放心將其刪除！
+> ☑️ App 中預設顯示之紀錄為預設範例資料，請放心將其刪除！
 > The workout records shown by default are sample data. Feel free to delete them!
+
+---
+
+## 💾 資料儲存說明｜Data Storage Notice
+
+‼️App 的所有資料儲存於**瀏覽器的 localStorage**，請注意以下情況會導致資料永久消失：
+
+- 在瀏覽器設定中清除「網站資料」或「localStorage」
+- 換手機或換瀏覽器（資料不會自動轉移）
+- 重灌手機作業系統
+
+> All data is stored in your **browser's localStorage**.
+> Data will be permanently lost if you clear site data, switch devices, or reinstall your OS.
+> There is currently no cloud sync or export feature.
+
+建議定期截圖重要紀錄作為備份。
 
 ---
 
