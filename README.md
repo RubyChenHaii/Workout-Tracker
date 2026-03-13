@@ -1,2 +1,63 @@
-# Workout-Tracker
-# 💪 Workout Tracker  一個手機優先的健身紀錄 PWA App，支援中英文雙語。  ## 功能 - 訓練紀錄（重量、組次、感受） - 動作庫管理與知識筆記 - 訓練日曆總覽 - 資料存於本機（localStorage） - 支援加入手機主畫面（PWA）  ## 立即使用 用手機 Safari / Chrome 打開： 👉 https://你的帳號.github.io/workout-tracker  打開後加入主畫面，即可離線使用。  ## 本機開發 git clone https://github.com/你的帳號/workout-tracker.git cd workout-tracker npm install npm start
+# 💪 GymReco
+
+**A mobile-first PWA workout tracker｜手機優先的健身紀錄 App**
+
+> Log your workouts, build your exercise library, and track your progress — all stored locally on your device.
+> 紀錄訓練、管理動作庫、追蹤進度，資料全部存在你的手機本地端。
+
+---
+
+## ✨ Features｜功能
+
+- 📋 Log workouts with weight, sets, reps, and session notes
+- 📚 Personal exercise library with knowledge notes
+- 📅 Training calendar overview
+- 🌐 Bilingual interface (中文 / English)
+- 💾 Data stored locally via localStorage — no account needed
+- 📱 PWA — add to home screen for a native app experience
+
+---
+
+## 🚀 Try it now｜立即使用
+
+Open with iPhone Safari or Android Chrome:
+
+👉 **https://rubychenhaii.github.io/workout-tracker**
+
+Then: **Share → Add to Home Screen** for full-screen experience.
+
+---
+
+## 🛠️ Local Development｜本機開發
+```bash
+git clone https://github.com/rubychenhaii/workout-tracker.git
+cd workout-tracker
+npm install
+npm start
+```
+
+To deploy:
+```bash
+npm run deploy
+```
+
+---
+
+## 📦 Tech Stack｜技術
+
+- React 19
+- PWA (localStorage)
+- Deployed via GitHub Pages
+
+---
+
+## 👤 Author｜作者
+
+**Ruby Chen**
+GitHub: [@rubychenhaii](https://github.com/rubychenhaii)
+
+---
+
+## 📄 License
+
+MIT © 2026 Ruby Chen
