@@ -48,6 +48,7 @@ npm run deploy
 - React 19
 - PWA (localStorage)
 - Deployed via GitHub Pages
+- Developed with help from Claude Sonnet 4.6
 
 ---
 
