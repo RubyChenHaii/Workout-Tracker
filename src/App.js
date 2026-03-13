@@ -402,12 +402,72 @@ function HomeTab({workouts,library,setTab,setDetailId,lang,setLang}){
 }
 
 // ═══════════════════════════════════════════════════════
+//  REPS PICKER  （iOS 滾輪風格）
+// ═══════════════════════════════════════════════════════
+function RepsPicker({value, onChange}){
+  const ITEM_H=36, VISIBLE=5, MIN=1, MAX=50;
+  const nums=Array.from({length:MAX-MIN+1},(_,i)=>i+MIN);
+  const listRef=React.useRef(null);
+  const isTouching=React.useRef(false);
+
+  // 初始捲到正確位置
+  React.useEffect(()=>{
+    if(listRef.current){
+      listRef.current.scrollTop=(value-MIN)*ITEM_H;
+    }
+  },[]);// eslint-disable-line
+
+  const onScroll=()=>{
+    if(!listRef.current) return;
+    const idx=Math.round(listRef.current.scrollTop/ITEM_H);
+    const clamped=Math.max(0,Math.min(nums.length-1,idx));
+    if(nums[clamped]!==value) onChange(nums[clamped]);
+  };
+
+  const snapOnEnd=()=>{
+    if(!listRef.current) return;
+    const idx=Math.round(listRef.current.scrollTop/ITEM_H);
+    listRef.current.scrollTo({top:idx*ITEM_H, behavior:"smooth"});
+  };
+
+  return(
+    <div style={{position:"relative",width:52,height:ITEM_H*VISIBLE,overflow:"hidden",borderRadius:10,background:C.f5,border:`1.5px solid ${C.sep}`,flexShrink:0}}>
+      {/* 選中框 */}
+      <div style={{position:"absolute",top:"50%",left:0,right:0,height:ITEM_H,transform:"translateY(-50%)",background:`${C.blue}18`,borderTop:`1.5px solid ${C.blue}40`,borderBottom:`1.5px solid ${C.blue}40`,pointerEvents:"none",zIndex:2}}/>
+      {/* 上下漸層遮罩 */}
+      <div style={{position:"absolute",top:0,left:0,right:0,height:ITEM_H*1.5,background:`linear-gradient(to bottom,${C.f5},transparent)`,pointerEvents:"none",zIndex:2}}/>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,height:ITEM_H*1.5,background:`linear-gradient(to top,${C.f5},transparent)`,pointerEvents:"none",zIndex:2}}/>
+      {/* 滾動清單 */}
+      <div ref={listRef}
+        onScroll={onScroll}
+        onTouchStart={()=>{isTouching.current=true;}}
+        onTouchEnd={()=>{isTouching.current=false; snapOnEnd();}}
+        onMouseUp={snapOnEnd}
+        style={{height:"100%",overflowY:"scroll",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",
+          paddingTop:ITEM_H*2, paddingBottom:ITEM_H*2}}>
+        <style>{`.reps-scroll::-webkit-scrollbar{display:none}`}</style>
+        <div className="reps-scroll">
+          {nums.map(n=>(
+            <div key={n} style={{height:ITEM_H,display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:n===value?17:14, fontWeight:n===value?700:400,
+              color:n===value?C.blue:C.label, transition:"all 0.15s"}}>
+              {n}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 //  WEIGHT-SET EDITOR
 // ═══════════════════════════════════════════════════════
 function WeightSetEditor({weightSets,onChange}){
   const lang=useLang(); const t=T[lang];
+  const [openPicker,setOpenPicker]=useState(null); // {wi,ri}
   const upd=(wi,field,val)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,[field]:val}:ws));
-  const updRep=(wi,ri,val)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,reps:ws.reps.map((r,j)=>j===ri?(parseInt(val)||0):r)}:ws));
+  const updRep=(wi,ri,val)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,reps:ws.reps.map((r,j)=>j===ri?val:r)}:ws));
   const addRep=(wi)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,reps:[...ws.reps,ws.reps[ws.reps.length-1]||10]}:ws));
   const delRep=(wi,ri)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,reps:ws.reps.filter((_,j)=>j!==ri)}:ws));
   const del=(wi)=>onChange(weightSets.filter((_,i)=>i!==wi));
@@ -415,22 +475,25 @@ function WeightSetEditor({weightSets,onChange}){
   return(
     <div>
       {weightSets.map((ws,wi)=>(
-        <div key={wi} style={{marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+        <div key={wi} style={{marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
             <input value={ws.weight} onChange={e=>upd(wi,"weight",e.target.value)} placeholder={t.weightPlaceholder}
               style={{flex:1,background:C.f5,border:"none",borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:600,color:C.text,outline:"none",fontFamily:"inherit"}}/>
             <button onClick={()=>del(wi)} style={{background:"none",border:"none",color:C.label,fontSize:20,cursor:"pointer",padding:"0 2px",lineHeight:1}}>×</button>
           </div>
-          <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6,paddingLeft:4}}>
-            <span style={{fontSize:12,color:C.label,marginRight:2}}>{t.weSets}</span>
+          <div style={{fontSize:12,color:C.label,marginBottom:8,paddingLeft:2}}>{t.weSets}</div>
+          <div style={{display:"flex",alignItems:"flex-end",flexWrap:"wrap",gap:8,paddingLeft:2}}>
             {ws.reps.map((r,ri)=>(
-              <div key={ri} style={{position:"relative"}}>
-                <input type="number" value={r} onChange={e=>updRep(wi,ri,e.target.value)}
-                  style={{width:44,background:C.f5,border:`1.5px solid ${C.sep}`,borderRadius:8,padding:"7px 4px",fontSize:15,fontWeight:600,textAlign:"center",color:C.text,outline:"none",boxSizing:"border-box"}}/>
-                {ws.reps.length>1&&<button onClick={()=>delRep(wi,ri)} style={{position:"absolute",top:-6,right:-6,width:16,height:16,borderRadius:"50%",background:C.label,border:"none",color:"#fff",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1}}>×</button>}
+              <div key={ri} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                <RepsPicker value={r} onChange={val=>updRep(wi,ri,val)}/>
+                {ws.reps.length>1&&(
+                  <button onClick={()=>delRep(wi,ri)}
+                    style={{width:20,height:20,borderRadius:"50%",background:C.label,border:"none",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1}}>×</button>
+                )}
               </div>
             ))}
-            <button onClick={()=>addRep(wi)} style={{width:44,height:36,background:"none",border:`1.5px dashed ${C.sep}`,borderRadius:8,color:C.blue,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            <button onClick={()=>addRep(wi)}
+              style={{width:52,height:36*5,background:"none",border:`1.5px dashed ${C.sep}`,borderRadius:10,color:C.blue,fontSize:22,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:"flex-start"}}>+</button>
           </div>
         </div>
       ))}

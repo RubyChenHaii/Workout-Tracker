@@ -27,6 +27,9 @@ Open with iPhone Safari or Android Chrome:
 
 Then: **Share → Add to Home Screen** for full-screen experience.
 
+> ⚠️ App 中預設顯示之紀錄為預設範例資料，請放心將其刪除！
+> The workout records shown by default are sample data. Feel free to delete them!
+
 ---
 
 ## 🛠️ Local Development｜本機開發
