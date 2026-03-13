@@ -9,7 +9,7 @@ const useLang = () => useContext(LangCtx);
 const T = {
   zh: {
     // Nav
-    navHome:"主頁", navHistory:"歷史", navLog:"記錄", navLibrary:"動作庫",
+    navHome:"主頁", navHistory:"歷史", navLog:"記錄", navLibrary:"動作庫", navAbout:"關於",
     // Home
     homeSubtitle:"健身日誌", homeTitle:"總覽",
     statWeekCount:"本週訓練次數", statLibCount:"動作庫收錄動作",
@@ -70,7 +70,7 @@ const T = {
     langBtn:"EN",
   },
   en: {
-    navHome:"Home", navHistory:"History", navLog:"Log", navLibrary:"Library",
+    navHome:"Home", navHistory:"History", navLog:"Log", navLibrary:"Library", navAbout:"About",
     homeSubtitle:"Workout Journal", homeTitle:"Overview",
     statWeekCount:"Workouts this week", statLibCount:"Exercises in library",
     sectionCalendar:"Training Calendar", sectionRecent:"Recent Workouts",
@@ -262,6 +262,8 @@ function BottomNav({tab,setTab}){
       svg:(active)=><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke={active?C.blue:C.label} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>},
     {id:"library", label:t.navLibrary,
       svg:(active)=><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke={active?C.blue:C.label} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19V6a2 2 0 012-2h12a2 2 0 012 2v13"/><path d="M4 19a2 2 0 002 2h12a2 2 0 002-2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>},
+    {id:"about",   label:t.navAbout,
+      svg:(active)=><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke={active?C.blue:C.label} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8.5"/><line x1="12" y1="12" x2="12" y2="16"/></svg>},
   ];
   return(
     <div style={{display:"flex",background:C.card,borderTop:`1px solid ${C.sep}`,flexShrink:0}}>
@@ -1013,6 +1015,80 @@ function LibraryTab({library,setLibrary,openItemId,setOpenItemId}){
 }
 
 // ═══════════════════════════════════════════════════════
+//  ABOUT TAB
+// ═══════════════════════════════════════════════════════
+function AboutTab(){
+  const lang=useLang();
+  const isZh=lang==="zh";
+  return(
+    <div style={{flex:1,overflowY:"auto",background:C.bg}}>
+      <div style={{padding:"8px 20px 16px",background:C.card,borderBottom:`1px solid ${C.sep}`}}>
+        <div style={{fontSize:13,color:C.label,marginBottom:2}}>{isZh?"關於":"About"}</div>
+        <div style={{fontSize:28,fontWeight:700,color:C.text,letterSpacing:-0.5}}>GymReco</div>
+      </div>
+      <div style={{padding:"16px"}}>
+
+        {/* App icon + version */}
+        <Card style={{marginBottom:16}}>
+          <div style={{padding:"28px 16px",display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+            <div style={{width:72,height:72,borderRadius:18,background:`linear-gradient(135deg,${C.blue},${C.indigo})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,boxShadow:"0 4px 16px rgba(0,122,255,0.3)"}}>💪</div>
+            <div style={{fontSize:20,fontWeight:700,color:C.text}}>GymReco</div>
+            <div style={{fontSize:13,color:C.label}}>Version 1.0.0</div>
+          </div>
+        </Card>
+
+        {/* Description */}
+        <SLabel>{isZh?"簡介":"Description"}</SLabel>
+        <Card style={{marginBottom:16}}>
+          <div style={{padding:"14px 16px",fontSize:14,color:C.sub,lineHeight:1.8}}>
+            {isZh
+              ?"GymReco 是一款手機優先的健身紀錄 App，讓你在重訓時快速記錄動作、重量與組次。支援個人動作庫管理、知識筆記累積，以及訓練日曆總覽。所有資料存於本機，不需要帳號。"
+              :"GymReco is a mobile-first PWA workout tracker. Quickly log exercises, weights, and sets during your training. Features a personal exercise library with knowledge notes and a training calendar. All data is stored locally — no account required."}
+          </div>
+        </Card>
+
+        {/* Author */}
+        <SLabel>{isZh?"作者":"Author"}</SLabel>
+        <Card style={{marginBottom:16}}>
+          <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:`linear-gradient(135deg,${C.blue},${C.indigo})`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:18,fontWeight:700,flexShrink:0}}>R</div>
+            <div>
+              <div style={{fontSize:15,fontWeight:600,color:C.text}}>Ruby Chen</div>
+              <div style={{fontSize:12,color:C.label,marginTop:2}}>@rubychenhaii</div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Links */}
+        <SLabel>{isZh?"連結":"Links"}</SLabel>
+        <Card style={{marginBottom:16}}>
+          <a href="https://github.com/rubychenhaii/workout-tracker" target="_blank" rel="noopener noreferrer"
+            style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",textDecoration:"none"}}>
+            <div style={{width:32,height:32,borderRadius:8,background:"#1C1C1E",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.744 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:600,color:C.text}}>GitHub</div>
+              <div style={{fontSize:12,color:C.label}}>rubychenhaii/workout-tracker</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill={C.sep} width="14" height="14"><path d="M10 6l6 6-6 6V6z"/></svg>
+          </a>
+        </Card>
+
+        {/* License */}
+        <Card style={{marginBottom:32}}>
+          <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:14,color:C.text}}>{isZh?"授權":"License"}</span>
+            <span style={{fontSize:14,color:C.label}}>MIT © 2026 Ruby Chen</span>
+          </div>
+        </Card>
+
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 //  localStorage helpers
 // ═══════════════════════════════════════════════════════
 function lsGet(key, fallback){
@@ -1089,6 +1165,8 @@ export default function App(){
               ?<HistoryTab workouts={workouts} library={library} setDetailId={setDetailId} setTab={setTab}/>
             :tab==="library"
               ?<LibraryTab library={library} setLibrary={setLibrary} openItemId={libItemId} setOpenItemId={setLibItemId}/>
+            :tab==="about"
+              ?<AboutTab/>
             :<HomeTab workouts={workouts} library={library} setTab={setTab} setDetailId={setDetailId} lang={lang} setLang={setLang}/>}
           </div>
           {tab!=="detail"&&<BottomNav tab={tab} setTab={setTab}/>}
