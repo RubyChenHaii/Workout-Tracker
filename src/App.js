@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 
 // ══════════════════════════════════════════════════════════════
 //  I18N
@@ -228,17 +228,29 @@ const fmtDate=(s)=>{
 };
 
 // ── tokens ────────────────────────────────────────────────────
-const C={bg:"#F2F2F7",card:"#FFFFFF",text:"#1C1C1E",sub:"#48484A",
+const LIGHT={bg:"#F2F2F7",card:"#FFFFFF",text:"#1C1C1E",sub:"#48484A",
   label:"#8E8E93",sep:"#E5E5EA",blue:"#007AFF",green:"#34C759",
   red:"#FF3B30",orange:"#FF9500",indigo:"#5856D6",
   f5:"rgba(0,0,0,0.05)",f3:"rgba(0,0,0,0.03)"};
+const DARK={bg:"#1C1C1E",card:"#2C2C2E",text:"#F2F2F7",sub:"#EBEBF5",
+  label:"#8E8E93",sep:"#3A3A3C",blue:"#0A84FF",green:"#30D158",
+  red:"#FF453A",orange:"#FF9F0A",indigo:"#6E6CF0",
+  f5:"rgba(255,255,255,0.08)",f3:"rgba(255,255,255,0.04)"};
+
+const DarkCtx=createContext(false);
+const useDark=()=>useContext(DarkCtx);
+// 所有元件透過 useC() 取得當前主題色
+const useC=()=>useContext(DarkCtx)?DARK:LIGHT;
+// 全域 C 保留供少數靜態地方使用（會被覆蓋）
+let C=LIGHT;
 
 // ── micro ─────────────────────────────────────────────────────
-function Div({left=0}){return <div style={{height:1,background:C.sep,marginLeft:left}}/>;}
-function Card({children,style={}}){return <div style={{background:C.card,borderRadius:16,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",...style}}>{children}</div>;}
-function SLabel({children}){return <div style={{fontSize:12,fontWeight:500,color:C.label,letterSpacing:0.4,marginBottom:8,paddingLeft:2,textTransform:"uppercase"}}>{children}</div>;}
+function Div({left=0}){const C=useC();return <div style={{height:1,background:C.sep,marginLeft:left}}/>;}
+function Card({children,style={}}){const C=useC();return <div style={{background:C.card,borderRadius:16,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.12)",...style}}>{children}</div>;}
+function SLabel({children}){const C=useC();return <div style={{fontSize:12,fontWeight:500,color:C.label,letterSpacing:0.4,marginBottom:8,paddingLeft:2,textTransform:"uppercase"}}>{children}</div>;}
 
 function StatusBar(){
+  const C=useC();
   const [t,setT]=useState(new Date());
   useEffect(()=>{const i=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(i);},[]);
   const h=t.getHours().toString().padStart(2,"0"),m=t.getMinutes().toString().padStart(2,"0");
@@ -252,7 +264,7 @@ function StatusBar(){
 }
 
 function BottomNav({tab,setTab}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const items=[
     {id:"home",    label:t.navHome,
       svg:(active)=><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke={active?C.blue:C.label} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12L12 4l9 8"/><path d="M5 10v9a1 1 0 001 1h4v-4h4v4h4a1 1 0 001-1v-9"/></svg>},
@@ -286,7 +298,7 @@ function BottomNav({tab,setTab}){
 //  CALENDAR
 // ═══════════════════════════════════════════════════════
 function Calendar({workouts,library,onDayClick}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const [vd,setVd]=useState(new Date());
   const yr=vd.getFullYear(),mo=vd.getMonth();
   const firstDay=new Date(yr,mo,1).getDay();
@@ -343,8 +355,8 @@ function Calendar({workouts,library,onDayClick}){
 // ═══════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════
-function HomeTab({workouts,library,setTab,setDetailId,lang,setLang}){
-  const t=T[lang];
+function HomeTab({workouts,library,setTab,setDetailId,lang,setLang,darkMode,setDarkMode}){
+  const t=T[lang]; const C=useC();
   const now=new Date(),weekAgo=new Date(now); weekAgo.setDate(now.getDate()-7);
   const thisWeek=workouts.filter(w=>new Date(w.date)>=weekAgo);
   const recent=[...workouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
@@ -356,11 +368,18 @@ function HomeTab({workouts,library,setTab,setDetailId,lang,setLang}){
           <div style={{fontSize:13,color:C.label,marginBottom:2}}>{t.homeSubtitle}</div>
           <div style={{fontSize:28,fontWeight:700,color:C.text,letterSpacing:-0.5}}>{t.homeTitle}</div>
         </div>
-        {/* Language toggle */}
-        <button onClick={()=>setLang(l=>l==="zh"?"en":"zh")}
-          style={{background:C.f5,border:`1px solid ${C.sep}`,borderRadius:20,padding:"5px 14px",fontSize:13,fontWeight:600,color:C.sub,cursor:"pointer",marginBottom:4,letterSpacing:0.3}}>
-          {t.langBtn}
-        </button>
+        <div style={{display:"flex",gap:8,marginBottom:4}}>
+          {/* Dark mode toggle */}
+          <button onClick={()=>setDarkMode(d=>!d)}
+            style={{background:C.f5,border:`1px solid ${C.sep}`,borderRadius:20,padding:"5px 12px",fontSize:15,cursor:"pointer"}}>
+            {darkMode?"☀️":"🌙"}
+          </button>
+          {/* Language toggle */}
+          <button onClick={()=>setLang(l=>l==="zh"?"en":"zh")}
+            style={{background:C.f5,border:`1px solid ${C.sep}`,borderRadius:20,padding:"5px 14px",fontSize:13,fontWeight:600,color:C.sub,cursor:"pointer",letterSpacing:0.3}}>
+            {t.langBtn}
+          </button>
+        </div>
       </div>
       <div style={{padding:"16px"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
@@ -405,6 +424,7 @@ function HomeTab({workouts,library,setTab,setDetailId,lang,setLang}){
 //  REPS PICKER  （iOS 滾輪風格）
 // ═══════════════════════════════════════════════════════
 function RepsPicker({value, onChange}){
+  const C=useC();
   const ITEM_H=36, VISIBLE=5, MIN=1, MAX=50;
   const nums=Array.from({length:MAX-MIN+1},(_,i)=>i+MIN);
   const listRef=React.useRef(null);
@@ -464,7 +484,7 @@ function RepsPicker({value, onChange}){
 //  WEIGHT-SET EDITOR
 // ═══════════════════════════════════════════════════════
 function WeightSetEditor({weightSets,onChange}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const [openPicker,setOpenPicker]=useState(null); // {wi,ri}
   const upd=(wi,field,val)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,[field]:val}:ws));
   const updRep=(wi,ri,val)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,reps:ws.reps.map((r,j)=>j===ri?val:r)}:ws));
@@ -508,7 +528,7 @@ function WeightSetEditor({weightSets,onChange}){
 //  LOG TAB
 // ═══════════════════════════════════════════════════════
 function LogTab({library,onSave}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const [muscleGroups,setMG]=useState([]);
   const [showMGPicker,setShowMG]=useState(false);
   const [rows,setRows]=useState([]);
@@ -692,7 +712,7 @@ function LogTab({library,onSave}){
 //  HISTORY TAB
 // ═══════════════════════════════════════════════════════
 function HistoryTab({workouts,library,setDetailId,setTab}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const [search,setSearch]=useState("");
   const filtered=workouts
     .filter(w=>{
@@ -754,7 +774,7 @@ function HistoryTab({workouts,library,setDetailId,setTab}){
 //  DETAIL TAB
 // ═══════════════════════════════════════════════════════
 function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDeleteWorkout}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const [editing,setEditing]=useState(false);
   const [rows,setRows]=useState([]);
 
@@ -887,7 +907,7 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
 //  LIBRARY TAB  +  ITEM DETAIL
 // ═══════════════════════════════════════════════════════
 function LibItemDetail({item,onUpdate,onDelete,onBack}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const [editNote, setEditNote]  =useState(item.note);
   const [editName, setEditName]  =useState(item.name);
   const [editMG,   setEditMG]    =useState(item.muscleGroup);
@@ -980,7 +1000,7 @@ function LibItemDetail({item,onUpdate,onDelete,onBack}){
 }
 
 function LibraryTab({library,setLibrary,openItemId,setOpenItemId}){
-  const lang=useLang(); const t=T[lang];
+  const lang=useLang(); const t=T[lang]; const C=useC();
   const [showAdd,setShowAdd]=useState(false);
   const [newName,setNewName]=useState("");
   const [newMG,  setNewMG  ]=useState(MG_OPTIONS[0]);
@@ -1081,7 +1101,7 @@ function LibraryTab({library,setLibrary,openItemId,setOpenItemId}){
 //  ABOUT TAB
 // ═══════════════════════════════════════════════════════
 function AboutTab(){
-  const lang=useLang();
+  const lang=useLang(); const C=useC();
   const isZh=lang==="zh";
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
@@ -1176,12 +1196,14 @@ export default function App(){
   const [detailId, setDetailId] =useState(null);
   const [libItemId,setLibItemId]=useState(null);
   const [lang,     setLang]     =useState(()=>lsGet("wt_lang", "zh"));
+  const [darkMode, setDarkMode] =useState(()=>lsGet("wt_dark", false));
+  const theme=darkMode?DARK:LIGHT;
   const detailWorkout=workouts.find(w=>w.id===detailId)||null;
 
-  // 每次 workouts / library / lang 改變就自動存檔
   useEffect(()=>{ lsSet("wt_workouts", workouts); }, [workouts]);
   useEffect(()=>{ lsSet("wt_library",  library);  }, [library]);
   useEffect(()=>{ lsSet("wt_lang",     lang);     }, [lang]);
+  useEffect(()=>{ lsSet("wt_dark",     darkMode); }, [darkMode]);
 
   const handleSave=(workout,noteUpdates)=>{
     setWorkouts(p=>[workout,...p]);
@@ -1207,35 +1229,37 @@ export default function App(){
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   return(
-    <LangCtx.Provider value={lang}>
-      <div style={{display:"flex",justifyContent:"center",alignItems:"center",minHeight:"100dvh",
-        background:isMobile?C.bg:"#1C1C1E",
-        fontFamily:"-apple-system,'SF Pro Text','Helvetica Neue',sans-serif"}}>
-        <div style={isMobile?{
-          width:"100%",height:"100dvh",background:C.card,
-          display:"flex",flexDirection:"column",overflow:"hidden",
-        }:{
-          width:393,height:852,background:C.card,borderRadius:52,
-          overflow:"hidden",display:"flex",flexDirection:"column",position:"relative",
-          boxShadow:"0 0 0 1px rgba(255,255,255,0.1),0 0 0 10px #2C2C2E,0 0 0 11px rgba(255,255,255,0.07),0 40px 100px rgba(0,0,0,0.7)",
-        }}>
-          {!isMobile&&<StatusBar/>}
-          <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:C.bg}}>
-            {tab==="detail"
-              ?<DetailTab workout={detailWorkout} library={library} onBack={()=>setTab("history")} onOpenLibItem={openLibItem} onUpdateWorkout={handleUpdateWorkout} onDeleteWorkout={handleDeleteWorkout}/>
-            :tab==="log"
-              ?<LogTab library={library} onSave={handleSave}/>
-            :tab==="history"
-              ?<HistoryTab workouts={workouts} library={library} setDetailId={setDetailId} setTab={setTab}/>
-            :tab==="library"
-              ?<LibraryTab library={library} setLibrary={setLibrary} openItemId={libItemId} setOpenItemId={setLibItemId}/>
-            :tab==="about"
-              ?<AboutTab/>
-            :<HomeTab workouts={workouts} library={library} setTab={setTab} setDetailId={setDetailId} lang={lang} setLang={setLang}/>}
+    <DarkCtx.Provider value={darkMode}>
+      <LangCtx.Provider value={lang}>
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",minHeight:"100dvh",
+          background:isMobile?theme.bg:"#1C1C1E",
+          fontFamily:"-apple-system,'SF Pro Text','Helvetica Neue',sans-serif"}}>
+          <div style={isMobile?{
+            width:"100%",height:"100dvh",background:theme.card,
+            display:"flex",flexDirection:"column",overflow:"hidden",
+          }:{
+            width:393,height:852,background:theme.card,borderRadius:52,
+            overflow:"hidden",display:"flex",flexDirection:"column",position:"relative",
+            boxShadow:"0 0 0 1px rgba(255,255,255,0.1),0 0 0 10px #2C2C2E,0 0 0 11px rgba(255,255,255,0.07),0 40px 100px rgba(0,0,0,0.7)",
+          }}>
+            {!isMobile&&<StatusBar/>}
+            <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
+              {tab==="detail"
+                ?<DetailTab workout={detailWorkout} library={library} onBack={()=>setTab("history")} onOpenLibItem={openLibItem} onUpdateWorkout={handleUpdateWorkout} onDeleteWorkout={handleDeleteWorkout}/>
+              :tab==="log"
+                ?<LogTab library={library} onSave={handleSave}/>
+              :tab==="history"
+                ?<HistoryTab workouts={workouts} library={library} setDetailId={setDetailId} setTab={setTab}/>
+              :tab==="library"
+                ?<LibraryTab library={library} setLibrary={setLibrary} openItemId={libItemId} setOpenItemId={setLibItemId}/>
+              :tab==="about"
+                ?<AboutTab/>
+              :<HomeTab workouts={workouts} library={library} setTab={setTab} setDetailId={setDetailId} lang={lang} setLang={setLang} darkMode={darkMode} setDarkMode={setDarkMode}/>}
+            </div>
+            {tab!=="detail"&&<BottomNav tab={tab} setTab={setTab}/>}
           </div>
-          {tab!=="detail"&&<BottomNav tab={tab} setTab={setTab}/>}
         </div>
-      </div>
-    </LangCtx.Provider>
+      </LangCtx.Provider>
+    </DarkCtx.Provider>
   );
 }
