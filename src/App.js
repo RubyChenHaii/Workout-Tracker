@@ -186,9 +186,24 @@ const INIT_LIBRARY = [
   { id:"lib10", name:"二頭彎舉", muscleGroup:"二頭", color:"#AF52DE", note:"", history:[] },
   { id:"lib11", name:"三頭下壓", muscleGroup:"三頭", color:"#5856D6", note:"", history:[] },
   { id:"lib12", name:"側平舉",   muscleGroup:"肩部", color:"#FF9500",  note:"", history:[] },
+  { id:"lib13", name:"自然跑姿", muscleGroup:"有氧", color:"#5AC8FA",
+    note:"前足落地，使用極簡赤足鞋。\n對足弓、阿基里斯腱、小腿負擔高，需循序漸進。\n每次跑步份量至少2k，跑步時腳跟不落地！\n感受足弓像彈簧推進的感覺，和傳統跑鞋不同！",
+    history:[{ date:"2026-03-15", workoutId:6, equipment:"體育場橡膠跑道（每圈400m）",
+      weightSets:[{weight:"自重",reps:[1]}],
+      feeling:"跑2圈+走1圈+跑2圈+走1圈+跑1圈。赤足跑感覺很不一樣，小腿有感。"}]},
+  { id:"lib14", name:"蛙式游泳", muscleGroup:"有氧", color:"#5AC8FA",
+    note:"每次游泳1.5～2小時，至少來回5趟。\n其中至少一次去＆一次回不能中途停下！",
+    history:[{ date:"2026-03-15", workoutId:6, equipment:"游泳池（泳池長度25m）",
+      weightSets:[{weight:"自重",reps:[1]}],
+      feeling:"本次游了2小時，狀態不錯，完成至少一趟不停。"}]},
 ];
 
 const INIT_WORKOUTS = [
+  { id:6, date:"2026-03-15", weekday:"Sunday", muscleGroups:["有氧"],
+    exercises:[
+      { libId:"lib13", equipment:"體育場橡膠跑道（每圈400m）", weightSets:[{weight:"自重",reps:[1]}], feeling:"跑2圈+走1圈+跑2圈+走1圈+跑1圈。赤足跑感覺很不一樣，小腿有感。"},
+      { libId:"lib14", equipment:"游泳池（泳池長度25m）",       weightSets:[{weight:"自重",reps:[1]}], feeling:"本次游了2小時，狀態不錯，完成至少一趟不停。"},
+    ]},
   { id:1, date:"2026-03-09", weekday:"Monday",   muscleGroups:["腹部","胸肌"],
     exercises:[
       { libId:"lib1", equipment:"高度5，槓片貼上胸", weightSets:[{weight:"15kg",reps:[10,5,5]},{weight:"10kg",reps:[5,5]}], feeling:"狀態不錯，15kg 前幾組都很紮實，後來有點掉，改10kg 收尾。"},
@@ -217,13 +232,18 @@ const INIT_WORKOUTS = [
 
 // ── helpers ───────────────────────────────────────────────────
 const todayStr=()=>new Date().toISOString().slice(0,10);
-const uid=()=>"x"+Math.random().toString(36).slice(2,9);
-const fmtDate=(s)=>{
+// #6 改用 crypto.randomUUID() 避免 ID 碰撞
+const uid=()=>{
+  if(typeof crypto!=="undefined"&&crypto.randomUUID) return crypto.randomUUID();
+  return "x"+Math.random().toString(36).slice(2,9)+Date.now().toString(36);
+};
+// #3 fmtDate 支援語言參數
+const fmtDate=(s,lang="zh")=>{
   const d=new Date(s),t=new Date(); t.setHours(0,0,0,0);
   const y=new Date(t); y.setDate(t.getDate()-1);
   const dt=new Date(d); dt.setHours(0,0,0,0);
-  if(dt.getTime()===t.getTime()) return "今天";
-  if(dt.getTime()===y.getTime()) return "昨天";
+  if(dt.getTime()===t.getTime()) return lang==="en"?"Today":"今天";
+  if(dt.getTime()===y.getTime()) return lang==="en"?"Yesterday":"昨天";
   return `${d.getMonth()+1}/${d.getDate()}`;
 };
 
@@ -359,7 +379,7 @@ function HomeTab({workouts,library,setTab,setDetailId,lang,setLang,darkMode,setD
   const t=T[lang]; const C=useC();
   const now=new Date(),weekAgo=new Date(now); weekAgo.setDate(now.getDate()-7);
   const thisWeek=workouts.filter(w=>new Date(w.date)>=weekAgo);
-  const recent=[...workouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
+  const recent=[...workouts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3);
   const wdCN=lang==="zh"?WEEKDAY_CN:WEEKDAYS;
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
@@ -403,9 +423,9 @@ function HomeTab({workouts,library,setTab,setDetailId,lang,setLang,darkMode,setD
                     <span style={{fontSize:15,fontWeight:600,color:C.text}}>
                       {lang==="zh" ? w.muscleGroups.join("・") : w.muscleGroups.map(mg=>MG_EN[mg]||mg).join(" · ")}
                     </span>
-                    <span style={{fontSize:12,color:C.label}}>{fmtDate(w.date)}</span>
+                    <span style={{fontSize:12,color:C.label}}>{fmtDate(w.date,lang)}</span>
                   </div>
-                  <div style={{fontSize:12,color:C.label}}>{w.exercises.map(ex=>{const it=library.find(l=>l.id===ex.libId);return it?it.name:"?";}).join(lang==="zh"?"、":", ")}</div>
+                  <div style={{fontSize:12,color:C.label}}>{w.exercises.map(ex=>{const it=library.find(l=>l.id===ex.libId);return it?it.name:(lang==="en"?"(Deleted)":"(已刪除)");}).join(lang==="zh"?"、":", ")}</div>
                 </div>
                 <svg viewBox="0 0 24 24" fill={C.sep} width="14" height="14"><path d="M10 6l6 6-6 6V6z"/></svg>
               </div>
@@ -527,7 +547,7 @@ function WeightSetEditor({weightSets,onChange}){
 // ═══════════════════════════════════════════════════════
 //  LOG TAB
 // ═══════════════════════════════════════════════════════
-function LogTab({library,onSave}){
+function LogTab({library,onSave,showToast}){
   const lang=useLang(); const t=T[lang]; const C=useC();
   const [muscleGroups,setMG]=useState([]);
   const [showMGPicker,setShowMG]=useState(false);
@@ -556,9 +576,9 @@ function LogTab({library,onSave}){
   const grouped=filteredLib.reduce((acc,it)=>{if(!acc[it.muscleGroup])acc[it.muscleGroup]=[];acc[it.muscleGroup].push(it);return acc;},{});
 
   const handleSave=()=>{
-    if(rows.length===0){alert(t.atLeastOne);return;}
+    if(rows.length===0){showToast(t.atLeastOne);return;}
     const workout={
-      id:Date.now(), date:todayStr(), weekday:WEEKDAYS[new Date().getDay()],
+      id:uid(), date:todayStr(), weekday:WEEKDAYS[new Date().getDay()],
       muscleGroups: muscleGroups.length>0 ? muscleGroups
         : [...new Set(rows.map(r=>library.find(l=>l.id===r.libId)?.muscleGroup).filter(Boolean))],
       exercises: rows.map(r=>({libId:r.libId,equipment:r.equipment,weightSets:r.weightSets,feeling:r.feeling})),
@@ -693,7 +713,7 @@ function LogTab({library,onSave}){
                         style={{display:"flex",alignItems:"center",gap:12,width:"100%",padding:"13px 20px",background:"none",border:"none",cursor:"pointer",textAlign:"left"}}>
                         <div style={{width:10,height:10,borderRadius:"50%",background:it.color,flexShrink:0}}/>
                         <span style={{flex:1,fontSize:16,color:C.text}}>{it.name}</span>
-                        {it.history.length>0&&<span style={{fontSize:11,color:C.label}}>{t.logLastSeen} {fmtDate(it.history[it.history.length-1].date)}</span>}
+                        {it.history.length>0&&<span style={{fontSize:11,color:C.label}}>{t.logLastSeen} {fmtDate(it.history[it.history.length-1].date,lang)}</span>}
                         <span style={{color:C.blue,fontSize:20,lineHeight:1}}>+</span>
                       </button>
                     </div>
@@ -720,7 +740,7 @@ function HistoryTab({workouts,library,setDetailId,setTab}){
       const names=w.exercises.map(ex=>{const it=library.find(l=>l.id===ex.libId);return it?it.name+(MG_EN[it.muscleGroup]||""):"";}).join("");
       return names.toLowerCase().includes(search.toLowerCase())||w.muscleGroups.some(g=>g.includes(search)||(MG_EN[g]||"").toLowerCase().includes(search.toLowerCase()));
     })
-    .sort((a,b)=>b.date.localeCompare(a.date));
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
       <div style={{padding:"8px 20px 14px",background:C.card,borderBottom:`1px solid ${C.sep}`}}>
@@ -755,7 +775,7 @@ function HistoryTab({workouts,library,setDetailId,setTab}){
                   return(
                     <div key={i} style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:3}}>
                       {it&&<div style={{width:7,height:7,borderRadius:"50%",background:it.color,flexShrink:0,marginBottom:1}}/>}
-                      <span style={{fontSize:14,fontWeight:500,color:C.text,flexShrink:0}}>{it?it.name:"?"}</span>
+                      <span style={{fontSize:14,fontWeight:500,color:C.text,flexShrink:0}}>{it?it.name:(lang==="en"?"(Deleted)":"(已刪除)")}</span>
                       <span style={{fontSize:12,color:C.label,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ex.weightSets.map(ws=>`${ws.weight} ×${ws.reps.join("/")}${t.repsUnit}`).join("  ")}</span>
                     </div>
                   );
@@ -777,6 +797,7 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
   const lang=useLang(); const t=T[lang]; const C=useC();
   const [editing,setEditing]=useState(false);
   const [rows,setRows]=useState([]);
+  const [confirmDelete,setConfirmDelete]=useState(false);
 
   if(!workout) return null;
   const d=new Date(workout.date);
@@ -791,17 +812,35 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
     onUpdateWorkout({...workout, exercises:rows});
     setEditing(false);
   };
-  const handleDelete=()=>{
-    if(window.confirm(t.detailDeleteConfirm)){
-      onDeleteWorkout(workout.id);
-      onBack();
-    }
-  };
+  const handleDelete=()=>setConfirmDelete(true);
+  const confirmDoDelete=()=>{ onDeleteWorkout(workout.id); onBack(); };
   const updRow=(i,patch)=>setRows(p=>p.map((r,j)=>j===i?{...r,...patch}:r));
 
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
-      {/* Header */}
+      {/* 刪除確認對話框 */}
+      {confirmDelete&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:"20px"}}>
+          <div style={{background:C.card,borderRadius:16,padding:"24px 20px",width:"100%",maxWidth:320}}>
+            <div style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,textAlign:"center"}}>
+              {lang==="zh"?"刪除紀錄":"Delete Workout"}
+            </div>
+            <div style={{fontSize:14,color:C.sub,marginBottom:20,textAlign:"center",lineHeight:1.6}}>
+              {t.detailDeleteConfirm}
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setConfirmDelete(false)}
+                style={{flex:1,padding:"12px",background:C.f5,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:C.sub,cursor:"pointer"}}>
+                {lang==="zh"?"取消":"Cancel"}
+              </button>
+              <button onClick={confirmDoDelete}
+                style={{flex:1,padding:"12px",background:C.red,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:"#fff",cursor:"pointer"}}>
+                {lang==="zh"?"刪除":"Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{padding:"8px 16px 14px",background:C.card,borderBottom:`1px solid ${C.sep}`,display:"flex",alignItems:"center",gap:8}}>
         <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:"4px 0",color:C.blue,fontSize:16,fontWeight:500,flexShrink:0}}>{t.detailBack}</button>
         <div style={{flex:1,textAlign:"center"}}>
@@ -827,7 +866,14 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
         {/* ── VIEW MODE ── */}
         {!editing && workout.exercises.map((ex,i)=>{
           const it=library.find(l=>l.id===ex.libId);
-          if(!it) return null;
+          if(!it) return(
+            <Card key={i} style={{marginBottom:16}}>
+              <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:C.label,flexShrink:0}}/>
+                <span style={{fontSize:15,color:C.label,fontStyle:"italic"}}>{lang==="en"?"(Exercise deleted from library)":"（此動作已從動作庫刪除）"}</span>
+              </div>
+            </Card>
+          );
           const mgLabel=lang==="en"?MG_EN[it.muscleGroup]||it.muscleGroup:it.muscleGroup;
           return(
             <Card key={i} style={{marginBottom:16}}>
@@ -861,7 +907,14 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
         {/* ── EDIT MODE ── */}
         {editing && rows.map((row,i)=>{
           const it=library.find(l=>l.id===row.libId);
-          if(!it) return null;
+          if(!it) return(
+            <Card key={i} style={{marginBottom:12}}>
+              <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:C.label,flexShrink:0}}/>
+                <span style={{fontSize:15,color:C.label,fontStyle:"italic"}}>{lang==="en"?"(Exercise deleted from library)":"（此動作已從動作庫刪除）"}</span>
+              </div>
+            </Card>
+          );
           return(
             <Card key={i} style={{marginBottom:12}}>
               <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px 12px"}}>
@@ -977,7 +1030,7 @@ function LibItemDetail({item,onUpdate,onDelete,onBack}){
         {[...item.history].reverse().map((h,i)=>(
           <Card key={i} style={{marginBottom:10}}>
             <div style={{padding:"12px 16px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:14,fontWeight:700,color:C.text}}>{fmtDate(h.date)}</span>
+              <span style={{fontSize:14,fontWeight:700,color:C.text}}>{fmtDate(h.date,lang)}</span>
               <span style={{fontSize:12,color:C.label}}>{h.date}</span>
             </div>
             {h.equipment&&(<><Div/><div style={{padding:"8px 16px"}}><div style={{fontSize:11,fontWeight:600,color:C.label,marginBottom:3}}>{t.libEquip}</div><div style={{fontSize:13,color:C.sub,whiteSpace:"pre-wrap"}}>{h.equipment}</div></div></>)}
@@ -1079,7 +1132,7 @@ function LibraryTab({library,setLibrary,openItemId,setOpenItemId}){
                       <div style={{fontSize:15,fontWeight:500,color:C.text,marginBottom:1}}>{item.name}</div>
                       <div style={{fontSize:11,color:C.label}}>
                         {item.history.length>0
-                          ?`${item.history.length} ${t.libRecords} ${fmtDate(item.history[item.history.length-1].date)}`
+                          ?`${item.history.length} ${t.libRecords} ${fmtDate(item.history[item.history.length-1].date,lang)}`
                           :t.libNoHistory}
                       </div>
                     </div>
@@ -1117,7 +1170,7 @@ function AboutTab(){
             <img src={process.env.PUBLIC_URL+"/logo192.png"} alt="GymReco"
               style={{width:72,height:72,borderRadius:18,boxShadow:"0 4px 16px rgba(0,0,0,0.15)",objectFit:"cover"}}/>
             <div style={{fontSize:20,fontWeight:700,color:C.text}}>GymReco</div>
-            <div style={{fontSize:13,color:C.label}}>Version 1.0.0</div>
+            <div style={{fontSize:13,color:C.label}}>Version 1.5.0</div>
           </div>
         </Card>
 
@@ -1191,12 +1244,15 @@ function lsSet(key, value){
 // ═══════════════════════════════════════════════════════
 export default function App(){
   const [tab,      setTab]      =useState("home");
+  const [prevTab,  setPrevTab]  =useState("home");
+  const navigate=(newTab)=>{ setPrevTab(tab); setTab(newTab); };
   const [workouts, setWorkouts] =useState(()=>lsGet("wt_workouts", INIT_WORKOUTS));
   const [library,  setLibrary]  =useState(()=>lsGet("wt_library",  INIT_LIBRARY));
   const [detailId, setDetailId] =useState(null);
   const [libItemId,setLibItemId]=useState(null);
   const [lang,     setLang]     =useState(()=>lsGet("wt_lang", "zh"));
   const [darkMode, setDarkMode] =useState(()=>lsGet("wt_dark", false));
+  const [toast,    setToast]    =useState(null);
   const theme=darkMode?DARK:LIGHT;
   const detailWorkout=workouts.find(w=>w.id===detailId)||null;
 
@@ -1204,6 +1260,11 @@ export default function App(){
   useEffect(()=>{ lsSet("wt_library",  library);  }, [library]);
   useEffect(()=>{ lsSet("wt_lang",     lang);     }, [lang]);
   useEffect(()=>{ lsSet("wt_dark",     darkMode); }, [darkMode]);
+
+  const showToast=(msg)=>{
+    setToast(msg);
+    setTimeout(()=>setToast(null), 2500);
+  };
 
   const handleSave=(workout,noteUpdates)=>{
     setWorkouts(p=>[workout,...p]);
@@ -1220,7 +1281,7 @@ export default function App(){
       };
     }));
     setTab("home");
-    alert(T[lang].savedAlert);
+    showToast(T[lang].savedAlert);
   };
 
   const openLibItem=(id)=>{setLibItemId(id);setTab("library");};
@@ -1243,18 +1304,27 @@ export default function App(){
             boxShadow:"0 0 0 1px rgba(255,255,255,0.1),0 0 0 10px #2C2C2E,0 0 0 11px rgba(255,255,255,0.07),0 40px 100px rgba(0,0,0,0.7)",
           }}>
             {!isMobile&&<StatusBar/>}
+            {/* Toast 通知 */}
+            {toast&&(
+              <div style={{position:"absolute",top:60,left:"50%",transform:"translateX(-50%)",
+                background:"rgba(0,0,0,0.82)",color:"#fff",borderRadius:20,padding:"10px 20px",
+                fontSize:14,fontWeight:500,zIndex:400,whiteSpace:"nowrap",
+                boxShadow:"0 4px 16px rgba(0,0,0,0.3)"}}>
+                {toast}
+              </div>
+            )}
             <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
               {tab==="detail"
-                ?<DetailTab workout={detailWorkout} library={library} onBack={()=>setTab("history")} onOpenLibItem={openLibItem} onUpdateWorkout={handleUpdateWorkout} onDeleteWorkout={handleDeleteWorkout}/>
+                ?<DetailTab workout={detailWorkout} library={library} onBack={()=>setTab(prevTab)} onOpenLibItem={openLibItem} onUpdateWorkout={handleUpdateWorkout} onDeleteWorkout={handleDeleteWorkout}/>
               :tab==="log"
-                ?<LogTab library={library} onSave={handleSave}/>
+                ?<LogTab library={library} onSave={handleSave} showToast={showToast}/>
               :tab==="history"
-                ?<HistoryTab workouts={workouts} library={library} setDetailId={setDetailId} setTab={setTab}/>
+                ?<HistoryTab workouts={workouts} library={library} setDetailId={setDetailId} setTab={navigate}/>
               :tab==="library"
                 ?<LibraryTab library={library} setLibrary={setLibrary} openItemId={libItemId} setOpenItemId={setLibItemId}/>
               :tab==="about"
                 ?<AboutTab/>
-              :<HomeTab workouts={workouts} library={library} setTab={setTab} setDetailId={setDetailId} lang={lang} setLang={setLang} darkMode={darkMode} setDarkMode={setDarkMode}/>}
+              :<HomeTab workouts={workouts} library={library} setTab={navigate} setDetailId={setDetailId} lang={lang} setLang={setLang} darkMode={darkMode} setDarkMode={setDarkMode}/>}
             </div>
             {tab!=="detail"&&<BottomNav tab={tab} setTab={setTab}/>}
           </div>
