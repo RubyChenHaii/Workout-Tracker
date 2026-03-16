@@ -57,6 +57,10 @@ const T = {
     libNoteSave:"儲存筆記",
     libHistoryTitle:"訓練歷史", libHistoryEmpty:"尚無訓練紀錄",
     libEquip:"器材設定", libHistoryFeeling:"當次感受",
+    libLastEquip:"上次器材設定", libLastSets:"上次重量組次",
+    libLastEquipSub:"下次訓練時將自動代入", libLastSetsSub:"下次訓練時將自動代入",
+    libLastEquipPlaceholder:"尚無器材設定紀錄",
+    logEquipHint:"預設代入上次訓練資料", logSetsHint:"預設代入上次訓練資料",
     // Add item form
     addName:"動作名稱", addMuscle:"訓練部位", addColor:"顏色",
     addBtn:"新增動作", addCancel:"取消",
@@ -68,6 +72,9 @@ const T = {
     savedAlert:"✅ 已儲存！動作知識筆記已同步至動作庫。",
     atLeastOne:"請至少新增一個動作",
     langBtn:"EN",
+    exportTitle:"資料匯出", exportSub:"將你的訓練紀錄和動作庫備份到本機",
+    exportJSON:"匯出 JSON（完整備份）", exportCSV:"匯出 CSV（試算表）",
+    exportJSONSub:"可用於未來還原資料", exportCSVSub:"可用 Excel 或 Numbers 開啟",
   },
   en: {
     navHome:"Home", navHistory:"History", navLog:"Log", navLibrary:"Library", navAbout:"About",
@@ -111,6 +118,10 @@ const T = {
     libNoteSave:"Save Notes",
     libHistoryTitle:"Training History", libHistoryEmpty:"No workout history yet",
     libEquip:"Equipment Setup", libHistoryFeeling:"Session Feeling",
+    libLastEquip:"Last Equipment Setup", libLastSets:"Last Weight & Sets",
+    libLastEquipSub:"Will be pre-filled next session", libLastSetsSub:"Will be pre-filled next session",
+    libLastEquipPlaceholder:"No equipment record yet",
+    logEquipHint:"Pre-filled from last session", logSetsHint:"Pre-filled from last session",
     addName:"Exercise name", addMuscle:"Muscle Group", addColor:"Color",
     addBtn:"Add Exercise", addCancel:"Cancel",
     weSets:"Sets:", weAddSet:"+ Add weight group",
@@ -119,6 +130,9 @@ const T = {
     savedAlert:"✅ Saved! Knowledge notes synced to library.",
     atLeastOne:"Please add at least one exercise.",
     langBtn:"中",
+    exportTitle:"Export Data", exportSub:"Back up your workouts and exercise library",
+    exportJSON:"Export JSON (Full Backup)", exportCSV:"Export CSV (Spreadsheet)",
+    exportJSONSub:"Can be used to restore data later", exportCSVSub:"Open with Excel or Numbers",
   },
 };
 
@@ -127,15 +141,17 @@ const MG_EN = {
   "二頭":"Biceps","三頭":"Triceps","腹部":"Abs","核心":"Core",
   "臀部":"Glutes","有氧":"Cardio","其他":"Other",
 };
-const MG_ZH = Object.fromEntries(Object.entries(MG_EN).map(([z,e])=>[e,z]));
+// MG_ZH reserved for future use
+// const MG_ZH = Object.fromEntries(Object.entries(MG_EN).map(([z,e])=>[e,z]));
 
 const COLOR_OPTS = [
   "#FF6B6B","#FF2D55","#FF9500","#FFCC00",
   "#34C759","#5AC8FA","#007AFF","#5856D6","#AF52DE","#8E8E93",
 ];
-const MG_OPTIONS = ["胸肌","背部","腿部","肩部","二頭","三頭","腹部","核心","臀部","有氧","其他"];
-const WEEKDAYS   = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-const WEEKDAY_CN = ["週日","週一","週二","週三","週四","週五","週六"];
+const MG_OPTIONS  = ["胸肌","背部","腿部","肩部","二頭","三頭","腹部","核心","臀部","有氧","其他"];
+const WEEKDAYS    = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const WEEKDAY_CN  = ["週日","週一","週二","週三","週四","週五","週六"];
+const MONTHS_EN   = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const INIT_LIBRARY = [
   { id:"lib1", name:"抱槓片仰臥起坐", muscleGroup:"腹部", color:"#FF2D55",
@@ -325,7 +341,10 @@ function Calendar({workouts,library,onDayClick}){
   const dim=new Date(yr,mo+1,0).getDate();
   const todStr=new Date().toISOString().slice(0,10);
   const byDate={};
-  workouts.forEach(w=>{byDate[w.date]=w;});
+  workouts.forEach(w=>{
+    if(!byDate[w.date]) byDate[w.date]={date:w.date,exercises:[]};
+    byDate[w.date].exercises.push(...w.exercises);
+  });
   const cells=[];
   for(let i=0;i<firstDay;i++) cells.push(null);
   for(let d=1;d<=dim;d++) cells.push(d);
@@ -333,7 +352,9 @@ function Calendar({workouts,library,onDayClick}){
     <Card style={{marginBottom:16}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px 10px"}}>
         <button onClick={()=>setVd(new Date(yr,mo-1,1))} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:C.blue,padding:"0 4px",lineHeight:1}}>‹</button>
-        <span style={{fontSize:15,fontWeight:700,color:C.text}}>{yr} 年 {mo+1} 月</span>
+        <span style={{fontSize:15,fontWeight:700,color:C.text}}>
+          {lang==="zh" ? `${yr} 年 ${mo+1} 月` : `${MONTHS_EN[mo]} ${yr}`}
+        </span>
         <button onClick={()=>setVd(new Date(yr,mo+1,1))} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:C.blue,padding:"0 4px",lineHeight:1}}>›</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",padding:"0 10px 6px"}}>
@@ -349,7 +370,7 @@ function Calendar({workouts,library,onDayClick}){
           const isToday=ds===todStr;
           const dow=(firstDay+day-1)%7;
           return(
-            <div key={day} onClick={()=>w&&onDayClick(w.id)}
+            <div key={day} onClick={()=>w&&onDayClick(ds)}
               style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"4px 2px",cursor:w?"pointer":"default",borderRadius:10}}>
               <span style={{fontSize:13,fontWeight:isToday?700:400,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"50%",
                 background:isToday?C.blue:"transparent",
@@ -375,12 +396,11 @@ function Calendar({workouts,library,onDayClick}){
 // ═══════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════
-function HomeTab({workouts,library,setTab,setDetailId,lang,setLang,darkMode,setDarkMode}){
+function HomeTab({workouts,library,setTab,lang,setLang,darkMode,setDarkMode,openDayDetail}){
   const t=T[lang]; const C=useC();
   const now=new Date(),weekAgo=new Date(now); weekAgo.setDate(now.getDate()-7);
   const thisWeek=workouts.filter(w=>new Date(w.date)>=weekAgo);
   const recent=[...workouts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3);
-  const wdCN=lang==="zh"?WEEKDAY_CN:WEEKDAYS;
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
       <div style={{padding:"8px 20px 16px",background:C.card,borderBottom:`1px solid ${C.sep}`,display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
@@ -407,14 +427,14 @@ function HomeTab({workouts,library,setTab,setDetailId,lang,setLang,darkMode,setD
           <Card style={{padding:"14px 16px"}}><div style={{fontSize:26,fontWeight:700,color:C.text}}>{library.length}<span style={{fontSize:13,fontWeight:500,color:C.label}}> {t.pieces}</span></div><div style={{fontSize:12,color:C.label,marginTop:2}}>{t.statLibCount}</div></Card>
         </div>
         <SLabel>{t.sectionCalendar}</SLabel>
-        <Calendar workouts={workouts} library={library} onDayClick={id=>{setDetailId(id);setTab("detail");}}/>
+        <Calendar workouts={workouts} library={library} onDayClick={date=>openDayDetail(date)}/>
         <SLabel>{t.sectionRecent}</SLabel>
         <Card style={{marginBottom:16}}>
           {recent.length===0&&<div style={{padding:"32px",textAlign:"center",color:C.label,fontSize:14}}>{t.emptyRecent}</div>}
           {recent.map((w,i)=>(
             <div key={w.id}>
               {i>0&&<Div left={20}/>}
-              <div onClick={()=>{setDetailId(w.id);setTab("detail");}} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+              <div onClick={()=>openDayDetail(w.date)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
                 <div style={{flexShrink:0}}><div style={{fontSize:11,fontWeight:600,color:C.blue,background:`${C.blue}15`,borderRadius:6,padding:"2px 8px"}}>
                   {lang==="zh" ? WEEKDAY_CN[WEEKDAYS.indexOf(w.weekday)] : w.weekday.slice(0,3)}
                 </div></div>
@@ -448,26 +468,42 @@ function RepsPicker({value, onChange}){
   const ITEM_H=36, VISIBLE=5, MIN=1, MAX=50;
   const nums=Array.from({length:MAX-MIN+1},(_,i)=>i+MIN);
   const listRef=React.useRef(null);
-  const isTouching=React.useRef(false);
+  const scrollTimer=React.useRef(null);
+  const isScrolling=React.useRef(false);
 
   // 初始捲到正確位置
   React.useEffect(()=>{
     if(listRef.current){
       listRef.current.scrollTop=(value-MIN)*ITEM_H;
     }
+    // 元件卸載時清除 timer，避免記憶體洩漏
+    return()=>clearTimeout(scrollTimer.current);
   },[]);// eslint-disable-line
+
+  // value 外部改變時同步捲動位置
+  React.useEffect(()=>{
+    if(listRef.current&&!isScrolling.current){
+      listRef.current.scrollTop=(value-MIN)*ITEM_H;
+    }
+  },[value]);// eslint-disable-line
 
   const onScroll=()=>{
     if(!listRef.current) return;
-    const idx=Math.round(listRef.current.scrollTop/ITEM_H);
-    const clamped=Math.max(0,Math.min(nums.length-1,idx));
-    if(nums[clamped]!==value) onChange(nums[clamped]);
-  };
-
-  const snapOnEnd=()=>{
-    if(!listRef.current) return;
-    const idx=Math.round(listRef.current.scrollTop/ITEM_H);
-    listRef.current.scrollTo({top:idx*ITEM_H, behavior:"smooth"});
+    isScrolling.current=true;
+    // 用 debounce 避免每次滾動都觸發 onChange 和重新渲染
+    clearTimeout(scrollTimer.current);
+    scrollTimer.current=setTimeout(()=>{
+      if(!listRef.current) return;
+      const idx=Math.round(listRef.current.scrollTop/ITEM_H);
+      const clamped=Math.max(0,Math.min(nums.length-1,idx));
+      // snap 到最近的格子
+      listRef.current.scrollTo({top:clamped*ITEM_H, behavior:"smooth"});
+      // 只在停止滾動後才通知父元件
+      setTimeout(()=>{
+        onChange(nums[clamped]);
+        isScrolling.current=false;
+      }, 150);
+    }, 100);
   };
 
   return(
@@ -480,9 +516,6 @@ function RepsPicker({value, onChange}){
       {/* 滾動清單 */}
       <div ref={listRef}
         onScroll={onScroll}
-        onTouchStart={()=>{isTouching.current=true;}}
-        onTouchEnd={()=>{isTouching.current=false; snapOnEnd();}}
-        onMouseUp={snapOnEnd}
         style={{height:"100%",overflowY:"scroll",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",
           paddingTop:ITEM_H*2, paddingBottom:ITEM_H*2}}>
         <style>{`.reps-scroll::-webkit-scrollbar{display:none}`}</style>
@@ -505,7 +538,6 @@ function RepsPicker({value, onChange}){
 // ═══════════════════════════════════════════════════════
 function WeightSetEditor({weightSets,onChange}){
   const lang=useLang(); const t=T[lang]; const C=useC();
-  const [openPicker,setOpenPicker]=useState(null); // {wi,ri}
   const upd=(wi,field,val)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,[field]:val}:ws));
   const updRep=(wi,ri,val)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,reps:ws.reps.map((r,j)=>j===ri?val:r)}:ws));
   const addRep=(wi)=>onChange(weightSets.map((ws,i)=>i===wi?{...ws,reps:[...ws.reps,ws.reps[ws.reps.length-1]||10]}:ws));
@@ -640,13 +672,19 @@ function LogTab({library,onSave,showToast}){
               </div>
               <Div/>
               <div style={{padding:"12px 16px"}}>
-                <div style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4,marginBottom:6}}>{t.logEquipLabel}</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4}}>{t.logEquipLabel}</div>
+                  {row.equipment&&<div style={{fontSize:10,color:C.blue,background:`${C.blue}10`,borderRadius:6,padding:"2px 8px"}}>{t.logEquipHint}</div>}
+                </div>
                 <textarea value={row.equipment} onChange={e=>upd(i,{equipment:e.target.value})} placeholder={t.logEquipPlaceholder}
                   style={{width:"100%",background:C.f3,border:`1px solid ${C.sep}`,borderRadius:10,padding:"10px 12px",fontSize:13,color:C.sub,resize:"none",height:54,boxSizing:"border-box",outline:"none",fontFamily:"inherit",lineHeight:1.5}}/>
               </div>
               <Div/>
               <div style={{padding:"12px 16px"}}>
-                <div style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4,marginBottom:10}}>{t.logSetsLabel}</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4}}>{t.logSetsLabel}</div>
+                  {row.weightSets.some(ws=>ws.weight)&&<div style={{fontSize:10,color:C.blue,background:`${C.blue}10`,borderRadius:6,padding:"2px 8px"}}>{t.logSetsHint}</div>}
+                </div>
                 <WeightSetEditor weightSets={row.weightSets} onChange={ws=>upd(i,{weightSets:ws})}/>
               </div>
               <Div/>
@@ -731,16 +769,24 @@ function LogTab({library,onSave,showToast}){
 // ═══════════════════════════════════════════════════════
 //  HISTORY TAB
 // ═══════════════════════════════════════════════════════
-function HistoryTab({workouts,library,setDetailId,setTab}){
+function HistoryTab({workouts,library,onOpenDay}){
   const lang=useLang(); const t=T[lang]; const C=useC();
   const [search,setSearch]=useState("");
-  const filtered=workouts
-    .filter(w=>{
-      if(!search) return true;
-      const names=w.exercises.map(ex=>{const it=library.find(l=>l.id===ex.libId);return it?it.name+(MG_EN[it.muscleGroup]||""):"";}).join("");
-      return names.toLowerCase().includes(search.toLowerCase())||w.muscleGroups.some(g=>g.includes(search)||(MG_EN[g]||"").toLowerCase().includes(search.toLowerCase()));
-    })
-    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  const filtered=workouts.filter(w=>{
+    if(!search) return true;
+    const names=w.exercises.map(ex=>{const it=library.find(l=>l.id===ex.libId);return it?it.name+(MG_EN[it.muscleGroup]||""):"";}).join("");
+    return names.toLowerCase().includes(search.toLowerCase())||w.muscleGroups.some(g=>g.includes(search)||(MG_EN[g]||"").toLowerCase().includes(search.toLowerCase()));
+  });
+
+  // 依日期分組，合併同一天的所有訓練
+  const byDate={};
+  filtered.forEach(w=>{
+    if(!byDate[w.date]) byDate[w.date]={date:w.date,weekday:w.weekday,workouts:[]};
+    byDate[w.date].workouts.push(w);
+  });
+  const dates=Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
+
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
       <div style={{padding:"8px 20px 14px",background:C.card,borderBottom:`1px solid ${C.sep}`}}>
@@ -752,17 +798,22 @@ function HistoryTab({workouts,library,setDetailId,setTab}){
         </div>
       </div>
       <div style={{padding:"16px"}}>
-        {filtered.map(w=>{
-          const d=new Date(w.date);
+        {dates.map(date=>{
+          const day=byDate[date];
+          const d=new Date(date);
           const wdLabel=lang==="zh"?WEEKDAY_CN[d.getDay()]:WEEKDAYS[d.getDay()].slice(0,3);
+          const allMGs=[...new Set(day.workouts.flatMap(w=>w.muscleGroups))];
+          const allExercises=day.workouts.flatMap(w=>w.exercises);
+          // 點擊進入第一筆（單筆）或最後記錄的那筆
+          const firstId=day.workouts[0].id;
           return(
-            <Card key={w.id} style={{marginBottom:12,cursor:"pointer"}}>
-              <div onClick={()=>{setDetailId(w.id);setTab("detail");}} style={{padding:"14px 16px"}}>
+            <Card key={date} style={{marginBottom:12,cursor:"pointer"}}>
+              <div onClick={()=>onOpenDay(date)} style={{padding:"14px 16px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <span style={{fontSize:15,fontWeight:700,color:C.text}}>{d.getMonth()+1}/{d.getDate()}</span>
                     <span style={{fontSize:12,fontWeight:500,color:C.blue,background:`${C.blue}12`,borderRadius:6,padding:"2px 8px"}}>{wdLabel}</span>
-                    {w.muscleGroups.map(mg=>(
+                    {allMGs.map(mg=>(
                       <span key={mg} style={{fontSize:12,fontWeight:500,color:C.indigo,background:`${C.indigo}12`,borderRadius:6,padding:"2px 8px"}}>
                         {lang==="en"?MG_EN[mg]||mg:mg}
                       </span>
@@ -770,7 +821,7 @@ function HistoryTab({workouts,library,setDetailId,setTab}){
                   </div>
                   <svg viewBox="0 0 24 24" fill={C.sep} width="14" height="14"><path d="M10 6l6 6-6 6V6z"/></svg>
                 </div>
-                {w.exercises.map((ex,i)=>{
+                {allExercises.map((ex,i)=>{
                   const it=library.find(l=>l.id===ex.libId);
                   return(
                     <div key={i} style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:3}}>
@@ -784,7 +835,7 @@ function HistoryTab({workouts,library,setDetailId,setTab}){
             </Card>
           );
         })}
-        {filtered.length===0&&<div style={{textAlign:"center",padding:"60px 0",color:C.label}}><div style={{fontSize:36,marginBottom:10}}>📭</div><div style={{fontSize:15,fontWeight:500}}>{t.historyEmpty}</div></div>}
+        {dates.length===0&&<div style={{textAlign:"center",padding:"60px 0",color:C.label}}><div style={{fontSize:36,marginBottom:10}}>📭</div><div style={{fontSize:15,fontWeight:500}}>{t.historyEmpty}</div></div>}
       </div>
     </div>
   );
@@ -961,17 +1012,59 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
 // ═══════════════════════════════════════════════════════
 function LibItemDetail({item,onUpdate,onDelete,onBack}){
   const lang=useLang(); const t=T[lang]; const C=useC();
-  const [editNote, setEditNote]  =useState(item.note);
-  const [editName, setEditName]  =useState(item.name);
-  const [editMG,   setEditMG]    =useState(item.muscleGroup);
-  const [editColor,setEditColor] =useState(item.color);
-  const [editingMeta,setEM]      =useState(false);
-  const noteDirty =editNote !==item.note;
-  const metaDirty =editName!==item.name||editMG!==item.muscleGroup||editColor!==item.color;
-  const save=()=>onUpdate({...item,note:editNote,name:editName,muscleGroup:editMG,color:editColor});
+  const lastH=item.history.length>0?item.history[item.history.length-1]:null;
+  const [editNote,     setEditNote]     =useState(item.note);
+  const [editName,     setEditName]     =useState(item.name);
+  const [editMG,       setEditMG]       =useState(item.muscleGroup);
+  const [editColor,    setEditColor]    =useState(item.color);
+  const [editEquip,    setEditEquip]    =useState(lastH?.equipment||"");
+  const [editWSets,    setEditWSets]    =useState(lastH?.weightSets?JSON.parse(JSON.stringify(lastH.weightSets)):[{weight:"",reps:[10]}]);
+  const [editingMeta,  setEM]           =useState(false);
+  const [confirmDelete,setConfirmDelete]=useState(false);
+
+  const noteDirty  = editNote!==item.note;
+  const equipDirty = editEquip!==(lastH?.equipment||"");
+  const wsetsDirty = JSON.stringify(editWSets)!==JSON.stringify(lastH?.weightSets||[{weight:"",reps:[10]}]);
+  const metaDirty  = editName!==item.name||editMG!==item.muscleGroup||editColor!==item.color;
+  const anyDirty   = noteDirty||equipDirty||wsetsDirty||metaDirty;
+
+  const save=()=>{
+    // 更新 history 最後一筆的 equipment 和 weightSets
+    const updatedHistory = item.history.length>0
+      ? item.history.map((h,i)=>i===item.history.length-1
+          ? {...h, equipment:editEquip, weightSets:editWSets}
+          : h)
+      : item.history;
+    onUpdate({...item, note:editNote, name:editName, muscleGroup:editMG, color:editColor, history:updatedHistory});
+  };
   const mgLabel=lang==="en"?MG_EN[editMG]||editMG:editMG;
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg,display:"flex",flexDirection:"column"}}>
+      {/* 刪除確認對話框 */}
+      {confirmDelete&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:"20px"}}>
+          <div style={{background:C.card,borderRadius:16,padding:"24px 20px",width:"100%",maxWidth:320}}>
+            <div style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,textAlign:"center"}}>
+              {lang==="zh"?"刪除動作":"Delete Exercise"}
+            </div>
+            <div style={{fontSize:14,color:C.sub,marginBottom:20,textAlign:"center",lineHeight:1.6}}>
+              {lang==="zh"
+                ?`確定要刪除「${item.name}」嗎？相關的訓練歷史紀錄不受影響，但此動作無法復原。`
+                :`Delete "${item.name}"? Training history won't be affected, but this cannot be undone.`}
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setConfirmDelete(false)}
+                style={{flex:1,padding:"12px",background:C.f5,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:C.sub,cursor:"pointer"}}>
+                {lang==="zh"?"取消":"Cancel"}
+              </button>
+              <button onClick={onDelete}
+                style={{flex:1,padding:"12px",background:C.red,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:"#fff",cursor:"pointer"}}>
+                {lang==="zh"?"刪除":"Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{padding:"8px 20px 14px",background:C.card,borderBottom:`1px solid ${C.sep}`,display:"flex",alignItems:"center",gap:10}}>
         <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:"4px 0",color:C.blue,fontSize:16,fontWeight:500}}>‹</button>
         <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}>
@@ -1004,14 +1097,51 @@ function LibItemDetail({item,onUpdate,onDelete,onBack}){
               ))}
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={save} disabled={!metaDirty&&!noteDirty}
-                style={{flex:1,padding:"10px",background:(!metaDirty&&!noteDirty)?"#C7C7CC":C.blue,border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:600,cursor:(!metaDirty&&!noteDirty)?"not-allowed":"pointer"}}>
+              <button onClick={save} disabled={!anyDirty}
+                style={{flex:1,padding:"10px",background:!anyDirty?"#C7C7CC":C.blue,border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:600,cursor:!anyDirty?"not-allowed":"pointer"}}>
                 {t.libItemSave}
               </button>
-              <button onClick={onDelete} style={{padding:"10px 14px",background:"none",border:`1.5px solid ${C.red}`,borderRadius:12,color:C.red,fontSize:14,fontWeight:600,cursor:"pointer"}}>{t.libItemDelete}</button>
+              <button onClick={()=>setConfirmDelete(true)} style={{padding:"10px 14px",background:"none",border:`1.5px solid ${C.red}`,borderRadius:12,color:C.red,fontSize:14,fontWeight:600,cursor:"pointer"}}>{t.libItemDelete}</button>
             </div>
           </Card>
         )}
+
+        {/* 上次器材設定（可編輯，下次訓練自動代入） */}
+        <SLabel>{t.libLastEquip}</SLabel>
+        <Card style={{marginBottom:16}}>
+          <div style={{padding:"14px 16px"}}>
+            <div style={{fontSize:11,color:C.blue,marginBottom:8}}>{t.libLastEquipSub}</div>
+            {item.history.length===0
+              ?<div style={{fontSize:13,color:C.label,fontStyle:"italic"}}>{t.libLastEquipPlaceholder}</div>
+              :<textarea value={editEquip} onChange={e=>setEditEquip(e.target.value)}
+                placeholder={t.logEquipPlaceholder}
+                style={{width:"100%",background:"none",border:"none",fontSize:13,color:C.sub,resize:"none",minHeight:72,boxSizing:"border-box",outline:"none",fontFamily:"inherit",lineHeight:1.6}}/>
+            }
+          </div>
+          {equipDirty&&(
+            <div style={{padding:"0 16px 14px"}}>
+              <button onClick={save} style={{width:"100%",padding:"10px",background:C.blue,border:"none",borderRadius:12,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>{t.libItemSave}</button>
+            </div>
+          )}
+        </Card>
+
+        {/* 上次重量組次（可編輯，下次訓練自動代入） */}
+        <SLabel>{t.libLastSets}</SLabel>
+        <Card style={{marginBottom:16}}>
+          <div style={{padding:"14px 16px"}}>
+            <div style={{fontSize:11,color:C.blue,marginBottom:10}}>{t.libLastSetsSub}</div>
+            {item.history.length===0
+              ?<div style={{fontSize:13,color:C.label,fontStyle:"italic"}}>{t.libHistoryEmpty}</div>
+              :<WeightSetEditor weightSets={editWSets} onChange={setEditWSets}/>
+            }
+          </div>
+          {wsetsDirty&&(
+            <div style={{padding:"0 16px 14px"}}>
+              <button onClick={save} style={{width:"100%",padding:"10px",background:C.blue,border:"none",borderRadius:12,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>{t.libItemSave}</button>
+            </div>
+          )}
+        </Card>
+
         <SLabel>{t.libNoteTitle}</SLabel>
         <Card style={{marginBottom:16}}>
           <div style={{padding:"14px 16px"}}>
@@ -1153,11 +1283,109 @@ function LibraryTab({library,setLibrary,openItemId,setOpenItemId}){
 // ═══════════════════════════════════════════════════════
 //  ABOUT TAB
 // ═══════════════════════════════════════════════════════
-function AboutTab(){
+function AboutTab({workouts,library,onImport}){
   const lang=useLang(); const C=useC();
   const isZh=lang==="zh";
+  const [importConfirm,setImportConfirm]=useState(null); // 暫存解析好的資料
+  const [importError,setImportError]=useState(null);
+  const fileInputRef=React.useRef(null);
+
+  const exportJSON=()=>{
+    const data={version:"1.5.1",exportedAt:new Date().toISOString(),workouts,library};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`gymreco-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCSV=()=>{
+    const rows=[["日期","星期","部位","動作","重量","組次","器材","感受"]];
+    workouts.forEach(w=>{
+      w.exercises.forEach(ex=>{
+        const lib=library.find(l=>l.id===ex.libId);
+        const name=lib?lib.name:"(已刪除)";
+        const mg=lib?lib.muscleGroup:"";
+        ex.weightSets.forEach(ws=>{
+          rows.push([
+            w.date, w.weekday, mg, name,
+            ws.weight, ws.reps.join("/"),
+            ex.equipment||"", ex.feeling||"",
+          ]);
+        });
+      });
+    });
+    const csv=rows.map(r=>r.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`gymreco-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileSelect=(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    setImportError(null);
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const parsed=JSON.parse(ev.target.result);
+        // 驗證基本結構
+        if(!parsed.workouts||!parsed.library||!Array.isArray(parsed.workouts)||!Array.isArray(parsed.library)){
+          throw new Error("invalid");
+        }
+        setImportConfirm(parsed);
+      } catch(err){
+        setImportError(isZh?"檔案格式不正確，請選擇 GymReco 匯出的 JSON 檔案。":"Invalid file format. Please select a JSON file exported from GymReco.");
+      }
+    };
+    reader.readAsText(file);
+    // 清空 input 讓同一個檔案可以重複選
+    e.target.value="";
+  };
+
+  const confirmImport=()=>{
+    onImport(importConfirm.workouts, importConfirm.library);
+    setImportConfirm(null);
+  };
+
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
+
+      {/* 匯入確認對話框 */}
+      {importConfirm&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:"20px"}}>
+          <div style={{background:C.card,borderRadius:16,padding:"24px 20px",width:"100%",maxWidth:320}}>
+            <div style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,textAlign:"center"}}>
+              {isZh?"確認匯入":"Confirm Import"}
+            </div>
+            <div style={{fontSize:14,color:C.sub,marginBottom:8,textAlign:"center",lineHeight:1.6}}>
+              {isZh
+                ?`找到 ${importConfirm.workouts.length} 筆訓練紀錄、${importConfirm.library.length} 個動作。`
+                :`Found ${importConfirm.workouts.length} workouts and ${importConfirm.library.length} exercises.`}
+            </div>
+            <div style={{fontSize:13,color:C.red,marginBottom:20,textAlign:"center",lineHeight:1.6,background:`${C.red}10`,borderRadius:10,padding:"8px 12px"}}>
+              {isZh?"⚠️ 這將覆蓋你目前所有的資料，此動作無法復原。":"⚠️ This will overwrite all your current data. This cannot be undone."}
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setImportConfirm(null)}
+                style={{flex:1,padding:"12px",background:C.f5,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:C.sub,cursor:"pointer"}}>
+                {isZh?"取消":"Cancel"}
+              </button>
+              <button onClick={confirmImport}
+                style={{flex:1,padding:"12px",background:C.blue,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:"#fff",cursor:"pointer"}}>
+                {isZh?"確認匯入":"Import"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{padding:"8px 20px 16px",background:C.card,borderBottom:`1px solid ${C.sep}`}}>
         <div style={{fontSize:13,color:C.label,marginBottom:2}}>{isZh?"關於":"About"}</div>
         <div style={{fontSize:28,fontWeight:700,color:C.text,letterSpacing:-0.5}}>GymReco</div>
@@ -1170,7 +1398,7 @@ function AboutTab(){
             <img src={process.env.PUBLIC_URL+"/logo192.png"} alt="GymReco"
               style={{width:72,height:72,borderRadius:18,boxShadow:"0 4px 16px rgba(0,0,0,0.15)",objectFit:"cover"}}/>
             <div style={{fontSize:20,fontWeight:700,color:C.text}}>GymReco</div>
-            <div style={{fontSize:13,color:C.label}}>Version 1.5.0</div>
+            <div style={{fontSize:13,color:C.label}}>Version 1.7.0</div>
           </div>
         </Card>
 
@@ -1213,13 +1441,160 @@ function AboutTab(){
         </Card>
 
         {/* License */}
-        <Card style={{marginBottom:32}}>
+        <Card style={{marginBottom:16}}>
           <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span style={{fontSize:14,color:C.text}}>{isZh?"授權":"License"}</span>
             <span style={{fontSize:14,color:C.label}}>MIT © 2026 Ruby Chen</span>
           </div>
         </Card>
 
+        {/* Export */}
+        <SLabel>{isZh?"資料匯出":"Export Data"}</SLabel>
+        <Card style={{marginBottom:32}}>
+          <div style={{padding:"14px 16px 6px"}}>
+            <div style={{fontSize:12,color:C.label,marginBottom:12}}>
+              {isZh?"將你的訓練紀錄和動作庫備份到本機":"Back up your workouts and exercise library"}
+            </div>
+            <button onClick={exportJSON}
+              style={{width:"100%",padding:"12px 16px",background:C.blue,border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:10,textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div>{isZh?"匯出 JSON（完整備份）":"Export JSON (Full Backup)"}</div>
+                <div style={{fontSize:11,fontWeight:400,opacity:0.8,marginTop:2}}>{isZh?"可用於未來還原資料":"Can be used to restore data later"}</div>
+              </div>
+              <span style={{fontSize:18}}>↓</span>
+            </button>
+            <button onClick={exportCSV}
+              style={{width:"100%",padding:"12px 16px",background:C.f5,border:`1px solid ${C.sep}`,borderRadius:12,color:C.text,fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:10,textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div>{isZh?"匯出 CSV（試算表）":"Export CSV (Spreadsheet)"}</div>
+                <div style={{fontSize:11,fontWeight:400,color:C.label,marginTop:2}}>{isZh?"可用 Excel 或 Numbers 開啟":"Open with Excel or Numbers"}</div>
+              </div>
+              <span style={{fontSize:18,color:C.label}}>↓</span>
+            </button>
+            {/* 隱藏的 file input */}
+            <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileSelect}
+              style={{display:"none"}}/>
+            <button onClick={()=>fileInputRef.current.click()}
+              style={{width:"100%",padding:"12px 16px",background:C.f5,border:`1.5px dashed ${C.sep}`,borderRadius:12,color:C.sub,fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:4,textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div>{isZh?"匯入 JSON（還原備份）":"Import JSON (Restore Backup)"}</div>
+                <div style={{fontSize:11,fontWeight:400,color:C.label,marginTop:2}}>{isZh?"將覆蓋目前所有資料":"Will overwrite all current data"}</div>
+              </div>
+              <span style={{fontSize:18,color:C.label}}>↑</span>
+            </button>
+            {importError&&<div style={{fontSize:12,color:C.red,marginTop:6,paddingLeft:4}}>{importError}</div>}
+          </div>
+        </Card>
+
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+//  DAY DETAIL TAB（當天所有訓練合併檢視）
+// ═══════════════════════════════════════════════════════
+function DayDetailTab({dayWorkouts,library,onBack,onOpenLibItem,onEditWorkout,onDeleteWorkout}){
+  const lang=useLang(); const t=T[lang]; const C=useC();
+  const [confirmDeleteId,setConfirmDeleteId]=useState(null);
+  if(!dayWorkouts||dayWorkouts.length===0) return null;
+  const d=new Date(dayWorkouts[0].date);
+  const wdLabel=lang==="zh"?WEEKDAY_CN[d.getDay()]:WEEKDAYS[d.getDay()].slice(0,3);
+  const allMGs=[...new Set(dayWorkouts.flatMap(w=>w.muscleGroups))];
+  return(
+    <div style={{flex:1,overflowY:"auto",background:C.bg}}>
+      {/* 刪除確認對話框 */}
+      {confirmDeleteId&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:"20px"}}>
+          <div style={{background:C.card,borderRadius:16,padding:"24px 20px",width:"100%",maxWidth:320}}>
+            <div style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,textAlign:"center"}}>{lang==="zh"?"刪除紀錄":"Delete Workout"}</div>
+            <div style={{fontSize:14,color:C.sub,marginBottom:20,textAlign:"center",lineHeight:1.6}}>{t.detailDeleteConfirm}</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setConfirmDeleteId(null)} style={{flex:1,padding:"12px",background:C.f5,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:C.sub,cursor:"pointer"}}>{lang==="zh"?"取消":"Cancel"}</button>
+              <button onClick={()=>{
+                onDeleteWorkout(confirmDeleteId);
+                setConfirmDeleteId(null);
+                if(dayWorkouts.length<=1) onBack();
+              }} style={{flex:1,padding:"12px",background:C.red,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:"#fff",cursor:"pointer"}}>{lang==="zh"?"刪除":"Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Header */}
+      <div style={{padding:"8px 16px 14px",background:C.card,borderBottom:`1px solid ${C.sep}`,display:"flex",alignItems:"center",gap:8}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:"4px 0",color:C.blue,fontSize:16,fontWeight:500,flexShrink:0}}>{t.detailBack}</button>
+        <div style={{flex:1,textAlign:"center"}}>
+          <div style={{fontSize:16,fontWeight:600,color:C.text}}>{d.getMonth()+1}/{d.getDate()} {wdLabel}</div>
+          <div style={{display:"flex",justifyContent:"center",gap:6,marginTop:4,flexWrap:"wrap"}}>
+            {allMGs.map(mg=>(
+              <span key={mg} style={{fontSize:12,fontWeight:500,color:C.indigo,background:`${C.indigo}12`,borderRadius:6,padding:"2px 8px"}}>
+                {lang==="en"?MG_EN[mg]||mg:mg}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div style={{width:46}}/>
+      </div>
+      <div style={{padding:"16px"}}>
+        {dayWorkouts.map((workout,wi)=>(
+          <div key={workout.id}>
+            {dayWorkouts.length>1&&(
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,marginTop:wi>0?8:0}}>
+                <div style={{height:1,flex:1,background:C.sep}}/>
+                <span style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4}}>
+                  {lang==="zh"?`第 ${wi+1} 次訓練`:`Session ${wi+1}`}
+                </span>
+                <div style={{height:1,flex:1,background:C.sep}}/>
+              </div>
+            )}
+            {workout.exercises.map((ex,i)=>{
+              const it=library.find(l=>l.id===ex.libId);
+              if(!it) return(
+                <Card key={i} style={{marginBottom:12}}>
+                  <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:C.label,flexShrink:0}}/>
+                    <span style={{fontSize:15,color:C.label,fontStyle:"italic"}}>{lang==="en"?"(Exercise deleted)":"（此動作已從動作庫刪除）"}</span>
+                  </div>
+                </Card>
+              );
+              return(
+                <Card key={i} style={{marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px 12px"}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:it.color,flexShrink:0}}/>
+                    <span style={{flex:1,fontSize:17,fontWeight:700,color:C.text}}>{it.name}</span>
+                    <button onClick={()=>onOpenLibItem(it.id)} style={{background:`${it.color}15`,border:"none",borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:600,color:it.color,cursor:"pointer"}}>{t.detailLibBtn}</button>
+                  </div>
+                  {ex.equipment&&(<><Div/><div style={{padding:"10px 16px"}}><div style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4,marginBottom:4}}>{t.detailEquip}</div><div style={{fontSize:13,color:C.sub,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{ex.equipment}</div></div></>)}
+                  <Div/>
+                  <div style={{padding:"10px 16px"}}>
+                    <div style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4,marginBottom:10}}>{t.detailSets}</div>
+                    {ex.weightSets.map((ws,wi2)=>(
+                      <div key={wi2} style={{marginBottom:10}}>
+                        <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:5}}>{ws.weight}</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:6,paddingLeft:4}}>
+                          {ws.reps.map((r,ri)=>(<div key={ri} style={{background:C.f5,borderRadius:8,padding:"6px 14px",fontSize:15,fontWeight:600,color:C.text}}>{r}<span style={{fontSize:11,color:C.label,marginLeft:1}}>{t.repsUnit}</span></div>))}
+                          <div style={{display:"flex",alignItems:"center",padding:"0 6px",fontSize:13,color:C.label}}>{t.totalReps} {ws.reps.reduce((a,b)=>a+b,0)} {t.repsUnit}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {it.note&&(<><Div/><div style={{padding:"10px 16px"}}><div style={{fontSize:11,fontWeight:600,color:C.label,letterSpacing:0.4,marginBottom:2}}>{t.detailKnowledge}</div><div style={{fontSize:10,color:C.label,marginBottom:6}}>{t.detailKnowledgeSub}</div><div style={{fontSize:13,color:C.sub,lineHeight:1.7,whiteSpace:"pre-wrap",background:C.f3,borderRadius:10,padding:"10px 12px"}}>{it.note}</div></div></>)}
+                  {ex.feeling&&(<><Div/><div style={{padding:"10px 16px 14px"}}><div style={{fontSize:11,fontWeight:600,color:C.orange,letterSpacing:0.4,marginBottom:2}}>{t.detailFeeling}</div><div style={{fontSize:13,color:C.sub,lineHeight:1.7,whiteSpace:"pre-wrap",background:`${C.orange}08`,border:`1px solid ${C.orange}25`,borderRadius:10,padding:"10px 12px"}}>{ex.feeling}</div></div></>)}
+                </Card>
+              );
+            })}
+            <div style={{display:"flex",gap:8,marginBottom:16}}>
+              <button onClick={()=>onEditWorkout(workout.id)}
+                style={{flex:1,padding:"11px",background:C.f5,border:"none",borderRadius:12,color:C.sub,fontSize:14,fontWeight:600,cursor:"pointer"}}>
+                {t.detailEdit}
+              </button>
+              <button onClick={()=>setConfirmDeleteId(workout.id)}
+                style={{padding:"11px 16px",background:"none",border:`1.5px solid ${C.red}`,borderRadius:12,color:C.red,fontSize:14,fontWeight:600,cursor:"pointer"}}>
+                {t.detailDelete}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1235,8 +1610,12 @@ function lsGet(key, fallback){
   } catch(e){ return fallback; }
 }
 function lsSet(key, value){
-  try{ localStorage.setItem(key, JSON.stringify(value)); }
-  catch(e){ console.warn("localStorage write failed:", e); }
+  // 用 setTimeout 讓 localStorage 寫入在畫面渲染完成後才執行
+  // 避免阻塞主執行緒導致 UI freeze
+  setTimeout(()=>{
+    try{ localStorage.setItem(key, JSON.stringify(value)); }
+    catch(e){ console.warn("localStorage write failed:", e); }
+  }, 0);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1249,6 +1628,7 @@ export default function App(){
   const [workouts, setWorkouts] =useState(()=>lsGet("wt_workouts", INIT_WORKOUTS));
   const [library,  setLibrary]  =useState(()=>lsGet("wt_library",  INIT_LIBRARY));
   const [detailId, setDetailId] =useState(null);
+  const [detailDate,setDetailDate]=useState(null);
   const [libItemId,setLibItemId]=useState(null);
   const [lang,     setLang]     =useState(()=>lsGet("wt_lang", "zh"));
   const [darkMode, setDarkMode] =useState(()=>lsGet("wt_dark", false));
@@ -1287,6 +1667,13 @@ export default function App(){
   const openLibItem=(id)=>{setLibItemId(id);setTab("library");};
   const handleUpdateWorkout=(updated)=>setWorkouts(p=>p.map(w=>w.id===updated.id?updated:w));
   const handleDeleteWorkout=(id)=>setWorkouts(p=>p.filter(w=>w.id!==id));
+  const openDayDetail=(date)=>{setDetailDate(date);navigate("daydetail");};
+  const handleEditWorkout=(id)=>{setDetailId(id);navigate("detail");};
+  const handleImport=(newWorkouts,newLibrary)=>{
+    setWorkouts(newWorkouts);
+    setLibrary(newLibrary);
+    showToast(lang==="zh"?"✅ 資料已成功匯入！":"✅ Data imported successfully!");
+  };
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   return(
@@ -1316,17 +1703,25 @@ export default function App(){
             <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
               {tab==="detail"
                 ?<DetailTab workout={detailWorkout} library={library} onBack={()=>setTab(prevTab)} onOpenLibItem={openLibItem} onUpdateWorkout={handleUpdateWorkout} onDeleteWorkout={handleDeleteWorkout}/>
+              :tab==="daydetail"
+                ?<DayDetailTab
+                    dayWorkouts={workouts.filter(w=>w.date===detailDate)}
+                    library={library}
+                    onBack={()=>setTab("history")}
+                    onOpenLibItem={openLibItem}
+                    onEditWorkout={handleEditWorkout}
+                    onDeleteWorkout={handleDeleteWorkout}/>
               :tab==="log"
                 ?<LogTab library={library} onSave={handleSave} showToast={showToast}/>
               :tab==="history"
-                ?<HistoryTab workouts={workouts} library={library} setDetailId={setDetailId} setTab={navigate}/>
+                ?<HistoryTab workouts={workouts} library={library} onOpenDay={openDayDetail}/>
               :tab==="library"
                 ?<LibraryTab library={library} setLibrary={setLibrary} openItemId={libItemId} setOpenItemId={setLibItemId}/>
               :tab==="about"
-                ?<AboutTab/>
-              :<HomeTab workouts={workouts} library={library} setTab={navigate} setDetailId={setDetailId} lang={lang} setLang={setLang} darkMode={darkMode} setDarkMode={setDarkMode}/>}
+                ?<AboutTab workouts={workouts} library={library} onImport={handleImport}/>
+              :<HomeTab workouts={workouts} library={library} setTab={navigate} lang={lang} setLang={setLang} darkMode={darkMode} setDarkMode={setDarkMode} openDayDetail={openDayDetail}/>}
             </div>
-            {tab!=="detail"&&<BottomNav tab={tab} setTab={setTab}/>}
+            {tab!=="detail"&&tab!=="daydetail"&&<BottomNav tab={tab} setTab={setTab}/>}
           </div>
         </div>
       </LangCtx.Provider>
