@@ -859,12 +859,8 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
     setEditing(true);
   };
   const cancelEdit=()=>setEditing(false);
-  const saveEdit=()=>{
-    onUpdateWorkout({...workout, exercises:rows});
-    setEditing(false);
-  };
-  const handleDelete=()=>setConfirmDelete(true);
-  const confirmDoDelete=()=>{ onDeleteWorkout(workout.id); onBack(); };
+  const saveEdit=()=>{ onUpdateWorkout({...workout,exercises:rows}); setEditing(false); };
+  const confirmDoDelete=()=>{ onDeleteWorkout(workout.id); };
   const updRow=(i,patch)=>setRows(p=>p.map((r,j)=>j===i?{...r,...patch}:r));
 
   return(
@@ -873,43 +869,42 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
       {confirmDelete&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:"20px"}}>
           <div style={{background:C.card,borderRadius:16,padding:"24px 20px",width:"100%",maxWidth:320}}>
-            <div style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,textAlign:"center"}}>
-              {lang==="zh"?"刪除紀錄":"Delete Workout"}
-            </div>
-            <div style={{fontSize:14,color:C.sub,marginBottom:20,textAlign:"center",lineHeight:1.6}}>
-              {t.detailDeleteConfirm}
-            </div>
+            <div style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,textAlign:"center"}}>{lang==="zh"?"刪除紀錄":"Delete Workout"}</div>
+            <div style={{fontSize:14,color:C.sub,marginBottom:20,textAlign:"center",lineHeight:1.6}}>{t.detailDeleteConfirm}</div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setConfirmDelete(false)}
-                style={{flex:1,padding:"12px",background:C.f5,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:C.sub,cursor:"pointer"}}>
-                {lang==="zh"?"取消":"Cancel"}
-              </button>
-              <button onClick={confirmDoDelete}
-                style={{flex:1,padding:"12px",background:C.red,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:"#fff",cursor:"pointer"}}>
-                {lang==="zh"?"刪除":"Delete"}
-              </button>
+              <button onClick={()=>setConfirmDelete(false)} style={{flex:1,padding:"12px",background:C.f5,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:C.sub,cursor:"pointer"}}>{lang==="zh"?"取消":"Cancel"}</button>
+              <button onClick={confirmDoDelete} style={{flex:1,padding:"12px",background:C.red,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:"#fff",cursor:"pointer"}}>{lang==="zh"?"刪除":"Delete"}</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Header */}
       <div style={{padding:"8px 16px 14px",background:C.card,borderBottom:`1px solid ${C.sep}`,display:"flex",alignItems:"center",gap:8}}>
-        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:"4px 0",color:C.blue,fontSize:16,fontWeight:500,flexShrink:0}}>{t.detailBack}</button>
+        <button onClick={editing?cancelEdit:onBack}
+          style={{background:"none",border:"none",cursor:"pointer",padding:"4px 0",color:C.blue,fontSize:16,fontWeight:500,flexShrink:0}}>
+          {editing?(lang==="zh"?"取消":"Cancel"):t.detailBack}
+        </button>
         <div style={{flex:1,textAlign:"center"}}>
           <div style={{fontSize:16,fontWeight:600,color:C.text}}>{d.getMonth()+1}/{d.getDate()} {wdLabel}</div>
-          <div style={{display:"flex",justifyContent:"center",gap:6,marginTop:4,flexWrap:"wrap"}}>
-            {workout.muscleGroups.map(mg=>(
-              <span key={mg} style={{fontSize:12,fontWeight:500,color:C.indigo,background:`${C.indigo}12`,borderRadius:6,padding:"2px 8px"}}>
-                {lang==="en"?MG_EN[mg]||mg:mg}
-              </span>
-            ))}
-          </div>
+          {!editing&&(
+            <div style={{display:"flex",justifyContent:"center",gap:6,marginTop:4,flexWrap:"wrap"}}>
+              {workout.muscleGroups.map(mg=>(
+                <span key={mg} style={{fontSize:12,fontWeight:500,color:C.indigo,background:`${C.indigo}12`,borderRadius:6,padding:"2px 8px"}}>
+                  {lang==="en"?MG_EN[mg]||mg:mg}
+                </span>
+              ))}
+            </div>
+          )}
+          {editing&&<div style={{fontSize:12,color:C.orange,marginTop:2}}>{lang==="zh"?"編輯模式":"Editing"}</div>}
         </div>
         {!editing
-          ?<button onClick={startEdit} style={{background:C.f5,border:"none",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,color:C.sub,cursor:"pointer",flexShrink:0}}>{t.detailEdit}</button>
-          :<div style={{display:"flex",gap:6,flexShrink:0}}>
-            <button onClick={cancelEdit} style={{background:C.f5,border:"none",borderRadius:8,padding:"6px 10px",fontSize:13,color:C.sub,cursor:"pointer"}}>{t.detailCancelEdit}</button>
-            <button onClick={saveEdit} style={{background:C.blue,border:"none",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,color:"#fff",cursor:"pointer"}}>{t.detailSaveEdit}</button>
-          </div>
+          ?<button onClick={startEdit} style={{background:`${C.blue}15`,border:"none",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,color:C.blue,cursor:"pointer",flexShrink:0}}>
+            {t.detailEdit}
+          </button>
+          :<button onClick={saveEdit} style={{background:C.blue,border:"none",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,color:"#fff",cursor:"pointer",flexShrink:0}}>
+            {t.detailSaveEdit}
+          </button>
         }
       </div>
 
@@ -941,9 +936,7 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
                   <div key={wi} style={{marginBottom:10}}>
                     <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:5}}>{ws.weight}</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:6,paddingLeft:4}}>
-                      {ws.reps.map((r,ri)=>(
-                        <div key={ri} style={{background:C.f5,borderRadius:8,padding:"6px 14px",fontSize:15,fontWeight:600,color:C.text}}>{r}<span style={{fontSize:11,color:C.label,marginLeft:1}}>{t.repsUnit}</span></div>
-                      ))}
+                      {ws.reps.map((r,ri)=>(<div key={ri} style={{background:C.f5,borderRadius:8,padding:"6px 14px",fontSize:15,fontWeight:600,color:C.text}}>{r}<span style={{fontSize:11,color:C.label,marginLeft:1}}>{t.repsUnit}</span></div>))}
                       <div style={{display:"flex",alignItems:"center",padding:"0 6px",fontSize:13,color:C.label}}>{t.totalReps} {ws.reps.reduce((a,b)=>a+b,0)} {t.repsUnit}</div>
                     </div>
                   </div>
@@ -995,9 +988,9 @@ function DetailTab({workout,library,onBack,onOpenLibItem,onUpdateWorkout,onDelet
           );
         })}
 
-        {/* 刪除按鈕（檢視模式才顯示） */}
+        {/* 刪除按鈕：只在檢視模式顯示，放在最底部 */}
         {!editing&&(
-          <button onClick={handleDelete}
+          <button onClick={()=>setConfirmDelete(true)}
             style={{width:"100%",padding:"14px",background:"none",border:`1.5px solid ${C.red}`,borderRadius:16,color:C.red,fontSize:15,fontWeight:600,cursor:"pointer",marginTop:4}}>
             {t.detailDelete}
           </button>
@@ -1494,32 +1487,14 @@ function AboutTab({workouts,library,onImport}){
 // ═══════════════════════════════════════════════════════
 //  DAY DETAIL TAB（當天所有訓練合併檢視）
 // ═══════════════════════════════════════════════════════
-function DayDetailTab({dayWorkouts,library,onBack,onOpenLibItem,onEditWorkout,onDeleteWorkout}){
+function DayDetailTab({dayWorkouts,library,onBack,onOpenLibItem,onEditWorkout}){
   const lang=useLang(); const t=T[lang]; const C=useC();
-  const [confirmDeleteId,setConfirmDeleteId]=useState(null);
   if(!dayWorkouts||dayWorkouts.length===0) return null;
   const d=new Date(dayWorkouts[0].date);
   const wdLabel=lang==="zh"?WEEKDAY_CN[d.getDay()]:WEEKDAYS[d.getDay()].slice(0,3);
   const allMGs=[...new Set(dayWorkouts.flatMap(w=>w.muscleGroups))];
   return(
     <div style={{flex:1,overflowY:"auto",background:C.bg}}>
-      {/* 刪除確認對話框 */}
-      {confirmDeleteId&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:"20px"}}>
-          <div style={{background:C.card,borderRadius:16,padding:"24px 20px",width:"100%",maxWidth:320}}>
-            <div style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,textAlign:"center"}}>{lang==="zh"?"刪除紀錄":"Delete Workout"}</div>
-            <div style={{fontSize:14,color:C.sub,marginBottom:20,textAlign:"center",lineHeight:1.6}}>{t.detailDeleteConfirm}</div>
-            <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setConfirmDeleteId(null)} style={{flex:1,padding:"12px",background:C.f5,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:C.sub,cursor:"pointer"}}>{lang==="zh"?"取消":"Cancel"}</button>
-              <button onClick={()=>{
-                onDeleteWorkout(confirmDeleteId);
-                setConfirmDeleteId(null);
-                if(dayWorkouts.length<=1) onBack();
-              }} style={{flex:1,padding:"12px",background:C.red,border:"none",borderRadius:12,fontSize:15,fontWeight:600,color:"#fff",cursor:"pointer"}}>{lang==="zh"?"刪除":"Delete"}</button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Header */}
       <div style={{padding:"8px 16px 14px",background:C.card,borderBottom:`1px solid ${C.sep}`,display:"flex",alignItems:"center",gap:8}}>
         <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:"4px 0",color:C.blue,fontSize:16,fontWeight:500,flexShrink:0}}>{t.detailBack}</button>
@@ -1583,16 +1558,10 @@ function DayDetailTab({dayWorkouts,library,onBack,onOpenLibItem,onEditWorkout,on
                 </Card>
               );
             })}
-            <div style={{display:"flex",gap:8,marginBottom:16}}>
-              <button onClick={()=>onEditWorkout(workout.id)}
-                style={{flex:1,padding:"11px",background:C.f5,border:"none",borderRadius:12,color:C.sub,fontSize:14,fontWeight:600,cursor:"pointer"}}>
-                {t.detailEdit}
-              </button>
-              <button onClick={()=>setConfirmDeleteId(workout.id)}
-                style={{padding:"11px 16px",background:"none",border:`1.5px solid ${C.red}`,borderRadius:12,color:C.red,fontSize:14,fontWeight:600,cursor:"pointer"}}>
-                {t.detailDelete}
-              </button>
-            </div>
+            <button onClick={()=>onEditWorkout(workout.id)}
+              style={{width:"100%",padding:"16px",background:C.blue,border:"none",borderRadius:16,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",marginBottom:16,boxShadow:`0 4px 16px ${C.blue}40`}}>
+              {t.detailEdit}
+            </button>
           </div>
         ))}
       </div>
@@ -1702,15 +1671,25 @@ export default function App(){
             )}
             <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
               {tab==="detail"
-                ?<DetailTab workout={detailWorkout} library={library} onBack={()=>setTab(prevTab)} onOpenLibItem={openLibItem} onUpdateWorkout={handleUpdateWorkout} onDeleteWorkout={handleDeleteWorkout}/>
+                ?<DetailTab
+                    workout={detailWorkout}
+                    library={library}
+                    onBack={()=>setTab(prevTab)}
+                    onOpenLibItem={openLibItem}
+                    onUpdateWorkout={handleUpdateWorkout}
+                    onDeleteWorkout={(id)=>{
+                      handleDeleteWorkout(id);
+                      // 刪除後，若當天還有其他訓練回 daydetail，否則直接回 history
+                      const remaining=workouts.filter(w=>w.id!==id&&w.date===detailDate);
+                      setTab(remaining.length>0?"daydetail":"history");
+                    }}/>
               :tab==="daydetail"
                 ?<DayDetailTab
                     dayWorkouts={workouts.filter(w=>w.date===detailDate)}
                     library={library}
                     onBack={()=>setTab("history")}
                     onOpenLibItem={openLibItem}
-                    onEditWorkout={handleEditWorkout}
-                    onDeleteWorkout={handleDeleteWorkout}/>
+                    onEditWorkout={handleEditWorkout}/>
               :tab==="log"
                 ?<LogTab library={library} onSave={handleSave} showToast={showToast}/>
               :tab==="history"
