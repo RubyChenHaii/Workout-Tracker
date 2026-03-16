@@ -13,7 +13,7 @@
 - 📋 Log workouts with weight, sets, reps, and session notes
 - 📚 Personal exercise library with knowledge notes
 - 📅 Training calendar overview
-- 🌐 Bilingual interface (中文 / English)
+- 🌐 Bilingual interface (中文 / English) + Night Mode 🌙
 - 💾 Data stored locally via localStorage — no account needed
 - 📱 PWA + Service Worker — add to home screen, works offline
 
@@ -45,7 +45,7 @@ Then: **Share → Add to Home Screen** for full-screen experience.
 
 > v1.6.0: add JSON/CSV export and JSON import in About page. This may come in handy!
 
-請善用「輸出為JSON」功能 (位於「關於」頁面)
+請善用「輸出為JSON」功能（位於「關於」頁面）進行存檔/讀檔。
 
 ---
 
