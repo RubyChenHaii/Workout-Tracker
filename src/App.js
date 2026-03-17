@@ -621,8 +621,9 @@ function LogTab({library,onSave,showToast}){
       exercises: rows.map(r=>({libId:r.libId,equipment:r.equipment,weightSets:r.weightSets,feeling:r.feeling})),
     };
     const noteUpdates=rows.filter(r=>r.noteDirty).map(r=>({libId:r.libId,note:r.noteLocal}));
-    onSave(workout,noteUpdates);
+    // 先清理本地狀態，再呼叫 onSave，避免多層 setState 同時觸發 freeze
     setRows([]); setMG([]); setSelectedDate(todayStr());
+    setTimeout(()=>onSave(workout,noteUpdates), 0);
   };
 
   const sd=localDate(selectedDate);
@@ -1693,6 +1694,7 @@ export default function App(){
   };
 
   const handleSave=(workout,noteUpdates)=>{
+    // 用函數式更新確保 React 能正確 batch 所有狀態變更
     setWorkouts(p=>[workout,...p]);
     setLibrary(p=>p.map(item=>{
       const noteUpd=noteUpdates.find(u=>u.libId===item.id);
@@ -1706,8 +1708,11 @@ export default function App(){
           : item.history,
       };
     }));
-    setTab("home");
-    showToast(T[lang].savedAlert);
+    // tab 切換和 toast 延遲到下一個 tick，讓上面的狀態先完成渲染
+    setTimeout(()=>{
+      setTab("home");
+      showToast(T[lang].savedAlert);
+    }, 0);
   };
 
   const openLibItem=(id)=>{setLibItemId(id);setTab("library");};
