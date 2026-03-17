@@ -1,0 +1,248 @@
+import { useState } from "react";
+import { useLang, T, MG_EN } from "../data/i18n.js";
+import { MG_OPTIONS, WEEKDAYS, WEEKDAY_CN, MONTHS_EN } from "../data/constants.js";
+import { useC } from "../theme.js";
+import { todayStr, localDate, uid } from "../utils/date.js";
+import { Div, Card } from "../components/ui.jsx";
+import { WeightSetEditor } from "../components/WeightSetEditor.jsx";
+
+export function LogTab({ library, onSave, showToast }) {
+  const lang = useLang(); const t = T[lang]; const C = useC();
+  const [muscleGroups,    setMG]            = useState([]);
+  const [showMGPicker,    setShowMG]         = useState(false);
+  const [rows,            setRows]           = useState([]);
+  const [showLibPicker,   setShowLib]        = useState(false);
+  const [libSearch,       setLibSearch]      = useState("");
+  const [selectedDate,    setSelectedDate]   = useState(todayStr());
+  const [showDatePicker,  setShowDatePicker] = useState(false);
+
+  const addRow = (libId) => {
+    const item = library.find(l => l.id === libId);
+    const lastH = item?.history.length > 0 ? item.history[item.history.length - 1] : null;
+    setRows(p => [...p, {
+      libId,
+      equipment:  lastH?.equipment || "",
+      weightSets: lastH?.weightSets ? JSON.parse(JSON.stringify(lastH.weightSets)) : [{ weight:"", reps:[10,10,10] }],
+      feeling:    "",
+      noteLocal:  item?.note || "",
+      noteDirty:  false,
+    }]);
+    setShowLib(false); setLibSearch("");
+  };
+
+  const upd = (i, patch) => setRows(p => p.map((r, j) => j === i ? { ...r, ...patch } : r));
+  const del = (i) => setRows(p => p.filter((_, j) => j !== i));
+
+  const filteredLib = library.filter(it => !libSearch || it.name.includes(libSearch) || it.muscleGroup.includes(libSearch) || (lang === "en" && (MG_EN[it.muscleGroup] || "").toLowerCase().includes(libSearch.toLowerCase())));
+  const grouped = filteredLib.reduce((acc, it) => { if (!acc[it.muscleGroup]) acc[it.muscleGroup] = []; acc[it.muscleGroup].push(it); return acc; }, {});
+
+  const handleSave = () => {
+    if (rows.length === 0) { showToast(t.atLeastOne); return; }
+    const sd = localDate(selectedDate);
+    const workout = {
+      id: uid(), date: selectedDate, weekday: WEEKDAYS[sd.getDay()],
+      muscleGroups: muscleGroups.length > 0 ? muscleGroups : [...new Set(rows.map(r => library.find(l => l.id === r.libId)?.muscleGroup).filter(Boolean))],
+      exercises: rows.map(r => ({ libId: r.libId, equipment: r.equipment, weightSets: r.weightSets, feeling: r.feeling })),
+    };
+    const noteUpdates = rows.filter(r => r.noteDirty).map(r => ({ libId: r.libId, note: r.noteLocal }));
+    setRows([]); setMG([]); setSelectedDate(todayStr());
+    setTimeout(() => onSave(workout, noteUpdates), 0);
+  };
+
+  const sd = localDate(selectedDate);
+  const isToday = selectedDate === todayStr();
+  const dateLabel = lang === "zh"
+    ? `${sd.getMonth() + 1}/${sd.getDate()} ${WEEKDAY_CN[sd.getDay()]}`
+    : `${sd.getMonth() + 1}/${sd.getDate()} ${WEEKDAYS[sd.getDay()].slice(0, 3)}`;
+
+  return (
+    <div style={{ flex:1, overflowY:"auto", background:C.bg }}>
+      {/* 日期選擇器 Sheet */}
+      {showDatePicker && (() => {
+        const today = localDate(todayStr());
+        const days = Array.from({ length:10 }, (_, i) => {
+          const d = new Date(today); d.setDate(today.getDate() - (i + 1)); return d;
+        });
+        return (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", display:"flex", flexDirection:"column", zIndex:200 }}
+            onClick={e => { if (e.target === e.currentTarget) setShowDatePicker(false); }}>
+            <div style={{ marginTop:"auto", background:C.card, borderRadius:"20px 20px 0 0", maxHeight:"70vh", display:"flex", flexDirection:"column" }}>
+              <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 4px" }}>
+                <div style={{ width:36, height:4, borderRadius:2, background:C.sep }} />
+              </div>
+              <div style={{ padding:"8px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.sep}` }}>
+                <span style={{ fontSize:17, fontWeight:700, color:C.text }}>{lang === "zh" ? "選擇日期" : "Select Date"}</span>
+                <button onClick={() => setShowDatePicker(false)} style={{ background:C.f5, border:"none", borderRadius:"50%", width:28, height:28, color:C.label, fontSize:16, cursor:"pointer" }}>×</button>
+              </div>
+              <div style={{ overflowY:"auto", padding:"8px 16px 32px" }}>
+                <div style={{ fontSize:12, color:C.label, textAlign:"center", padding:"8px 0 12px", lineHeight:1.6 }}>
+                  {lang === "zh" ? "補登日期僅限前 10 日之內" : "Back-logging is limited to the past 10 days"}
+                </div>
+                {days.map(d => {
+                  const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                  const isSelected = ds === selectedDate;
+                  const isT = ds === todayStr();
+                  const dow = d.getDay();
+                  const label = lang === "zh"
+                    ? `${d.getMonth() + 1}月${d.getDate()}日　${WEEKDAY_CN[dow]}`
+                    : `${MONTHS_EN[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}　${WEEKDAYS[dow].slice(0, 3)}`;
+                  return (
+                    <button key={ds} onClick={() => { setSelectedDate(ds); setShowDatePicker(false); }}
+                      style={{ width:"100%", padding:"13px 16px", marginBottom:4, background:isSelected?C.blue:C.f5, border:isSelected?"none":`1px solid ${C.sep}`, borderRadius:12, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", boxSizing:"border-box" }}>
+                      <span style={{ fontSize:15, fontWeight:isSelected?700:400, color:isSelected?"#fff":C.text }}>{label}</span>
+                      {isT && <span style={{ fontSize:11, fontWeight:600, color:isSelected?"rgba(255,255,255,0.8)":C.blue, background:isSelected?"rgba(255,255,255,0.2)":`${C.blue}15`, borderRadius:6, padding:"2px 8px" }}>
+                        {lang === "zh" ? "今天" : "Today"}
+                      </span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div style={{ padding:"8px 20px 14px", background:C.card, borderBottom:`1px solid ${C.sep}`, display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
+        <div>
+          <div style={{ fontSize:13, color:C.label, marginBottom:1 }}>{t.logSubtitle}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ fontSize:20, fontWeight:700, color:C.text, letterSpacing:-0.3 }}>{dateLabel}</div>
+            {!isToday && <span style={{ fontSize:11, fontWeight:600, color:C.orange, background:`${C.orange}15`, borderRadius:6, padding:"2px 8px" }}>{lang === "zh" ? "補登" : "Back-log"}</span>}
+          </div>
+        </div>
+        <button onClick={() => setShowDatePicker(true)}
+          style={{ background:C.f5, border:`1px solid ${C.sep}`, borderRadius:10, padding:"6px 12px", fontSize:13, color:C.sub, cursor:"pointer", marginBottom:4, fontWeight:500 }}>
+          {lang === "zh" ? "更改日期" : "Change Date"}
+        </button>
+      </div>
+
+      <div style={{ padding:"16px" }}>
+        <Card style={{ marginBottom:16 }}>
+          <div style={{ padding:"12px 16px", display:"flex", flexWrap:"wrap", gap:8, alignItems:"center" }}>
+            <span style={{ fontSize:12, fontWeight:500, color:C.label, letterSpacing:0.3 }}>{t.logMuscleLabel}</span>
+            {muscleGroups.map(mg => (
+              <span key={mg} style={{ display:"inline-flex", alignItems:"center", gap:4, background:`${C.indigo}15`, borderRadius:20, padding:"3px 10px", fontSize:13, fontWeight:500, color:C.indigo }}>
+                {lang === "en" ? MG_EN[mg] || mg : mg}
+                <button onClick={() => setMG(p => p.filter(x => x !== mg))} style={{ background:"none", border:"none", cursor:"pointer", padding:0, color:C.indigo, fontSize:14, lineHeight:1 }}>×</button>
+              </span>
+            ))}
+            <button onClick={() => setShowMG(v => !v)} style={{ background:`${C.blue}10`, border:`1px dashed ${C.blue}60`, borderRadius:20, padding:"3px 12px", fontSize:13, fontWeight:500, color:C.blue, cursor:"pointer" }}>
+              {showMGPicker ? t.logCollapse : t.logCustomMuscle}
+            </button>
+          </div>
+          {showMGPicker && (
+            <div style={{ padding:"0 16px 14px", display:"flex", flexWrap:"wrap", gap:6 }}>
+              {MG_OPTIONS.filter(m => !muscleGroups.includes(m)).map(m => (
+                <button key={m} onClick={() => setMG(p => [...p, m])} style={{ background:C.f5, border:`1px solid ${C.sep}`, borderRadius:20, padding:"5px 14px", fontSize:13, color:C.sub, cursor:"pointer" }}>
+                  {lang === "en" ? MG_EN[m] || m : m}
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {rows.map((row, i) => {
+          const item = library.find(l => l.id === row.libId);
+          if (!item) return null;
+          const mgLabel = lang === "en" ? MG_EN[item.muscleGroup] || item.muscleGroup : item.muscleGroup;
+          return (
+            <Card key={i} style={{ marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px 12px" }}>
+                <div style={{ width:10, height:10, borderRadius:"50%", background:item.color, flexShrink:0 }} />
+                <span style={{ flex:1, fontSize:16, fontWeight:700, color:C.text }}>{item.name}</span>
+                <span style={{ fontSize:11, color:item.color, background:`${item.color}15`, borderRadius:6, padding:"2px 8px", fontWeight:600 }}>{mgLabel}</span>
+                <button onClick={() => del(i)} style={{ background:"none", border:"none", cursor:"pointer", color:C.red, fontSize:13, fontWeight:500 }}>{t.logRemove}</button>
+              </div>
+              <Div />
+              <div style={{ padding:"12px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:C.label, letterSpacing:0.4 }}>{t.logEquipLabel}</div>
+                  {row.equipment && <div style={{ fontSize:10, color:C.blue, background:`${C.blue}10`, borderRadius:6, padding:"2px 8px" }}>{t.logEquipHint}</div>}
+                </div>
+                <textarea value={row.equipment} onChange={e => upd(i, { equipment: e.target.value })} placeholder={t.logEquipPlaceholder}
+                  style={{ width:"100%", background:C.f3, border:`1px solid ${C.sep}`, borderRadius:10, padding:"10px 12px", fontSize:13, color:C.sub, resize:"none", height:54, boxSizing:"border-box", outline:"none", fontFamily:"inherit", lineHeight:1.5 }} />
+              </div>
+              <Div />
+              <div style={{ padding:"12px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:C.label, letterSpacing:0.4 }}>{t.logSetsLabel}</div>
+                  {row.weightSets.some(ws => ws.weight) && <div style={{ fontSize:10, color:C.blue, background:`${C.blue}10`, borderRadius:6, padding:"2px 8px" }}>{t.logSetsHint}</div>}
+                </div>
+                <WeightSetEditor weightSets={row.weightSets} onChange={ws => upd(i, { weightSets: ws })} />
+              </div>
+              <Div />
+              <div style={{ padding:"12px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:600, color:C.label, letterSpacing:0.4 }}>{t.logKnowledgeLabel}</div>
+                    <div style={{ fontSize:10, color:C.label, marginTop:1 }}>{t.logKnowledgeSub}</div>
+                  </div>
+                  {row.noteDirty && <span style={{ fontSize:10, color:C.orange, fontWeight:600, background:`${C.orange}15`, borderRadius:6, padding:"2px 8px" }}>{t.logKnowledgeDirty}</span>}
+                </div>
+                <textarea value={row.noteLocal} onChange={e => upd(i, { noteLocal: e.target.value, noteDirty: true })} placeholder={t.logKnowledgePlaceholder}
+                  style={{ width:"100%", background:C.f3, border:`1px solid ${C.sep}`, borderRadius:10, padding:"10px 12px", fontSize:13, color:C.sub, resize:"none", height:90, boxSizing:"border-box", outline:"none", fontFamily:"inherit", lineHeight:1.6 }} />
+              </div>
+              <Div />
+              <div style={{ padding:"12px 16px" }}>
+                <div style={{ fontSize:11, fontWeight:600, color:C.orange, letterSpacing:0.4, marginBottom:2 }}>{t.logFeelingLabel}</div>
+                <div style={{ fontSize:10, color:C.label, marginBottom:6 }}>{t.logFeelingSub}</div>
+                <textarea value={row.feeling} onChange={e => upd(i, { feeling: e.target.value })} placeholder={t.logFeelingPlaceholder}
+                  style={{ width:"100%", background:`${C.orange}08`, border:`1px solid ${C.orange}30`, borderRadius:10, padding:"10px 12px", fontSize:13, color:C.sub, resize:"none", height:64, boxSizing:"border-box", outline:"none", fontFamily:"inherit", lineHeight:1.6 }} />
+              </div>
+            </Card>
+          );
+        })}
+
+        <button onClick={() => setShowLib(true)}
+          style={{ width:"100%", padding:"15px", background:C.card, border:`2px dashed ${C.sep}`, borderRadius:16, color:C.blue, fontSize:15, fontWeight:600, cursor:"pointer", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"center", gap:6, boxSizing:"border-box" }}>
+          {t.logAddExercise}
+        </button>
+        <button onClick={handleSave} disabled={rows.length === 0}
+          style={{ width:"100%", padding:"16px", background:rows.length>0?C.blue:"#C7C7CC", border:"none", borderRadius:16, color:"#fff", fontSize:17, fontWeight:600, cursor:rows.length>0?"pointer":"not-allowed", boxShadow:rows.length>0?"0 4px 16px rgba(0,122,255,0.3)":"none" }}>
+          {t.logSave}
+        </button>
+      </div>
+
+      {/* Library picker sheet */}
+      {showLibPicker && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", display:"flex", flexDirection:"column", zIndex:200 }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowLib(false); setLibSearch(""); } }}>
+          <div style={{ marginTop:"auto", background:C.card, borderRadius:"20px 20px 0 0", maxHeight:"75vh", display:"flex", flexDirection:"column" }}>
+            <div style={{ display:"flex", justifyContent:"center", padding:"10px 0 4px" }}>
+              <div style={{ width:36, height:4, borderRadius:2, background:"#C7C7CC" }} />
+            </div>
+            <div style={{ padding:"8px 20px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.sep}` }}>
+              <span style={{ fontSize:17, fontWeight:600, color:C.text }}>{t.logPickerTitle}</span>
+              <button onClick={() => { setShowLib(false); setLibSearch(""); }} style={{ background:C.f5, border:"none", borderRadius:"50%", width:28, height:28, color:C.label, fontSize:16, cursor:"pointer" }}>×</button>
+            </div>
+            <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.sep}` }}>
+              <input value={libSearch} onChange={e => setLibSearch(e.target.value)} placeholder={t.logPickerSearch}
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.sep}`, borderRadius:10, padding:"10px 14px", fontSize:15, color:C.text, boxSizing:"border-box", outline:"none", fontFamily:"inherit" }} />
+            </div>
+            <div style={{ overflowY:"auto", paddingBottom:20 }}>
+              {Object.entries(grouped).map(([mg, items]) => (
+                <div key={mg}>
+                  <div style={{ padding:"12px 20px 6px", fontSize:11, fontWeight:600, color:C.label, letterSpacing:0.5 }}>
+                    {lang === "en" ? MG_EN[mg] || mg : mg}
+                  </div>
+                  {items.map((it, i) => (
+                    <div key={it.id}>
+                      {i > 0 && <Div left={20} />}
+                      <button onClick={() => addRow(it.id)}
+                        style={{ display:"flex", alignItems:"center", gap:12, width:"100%", padding:"13px 20px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
+                        <div style={{ width:10, height:10, borderRadius:"50%", background:it.color, flexShrink:0 }} />
+                        <span style={{ flex:1, fontSize:16, color:C.text }}>{it.name}</span>
+                        {it.history.length > 0 && <span style={{ fontSize:11, color:C.label }}>{t.logLastSeen} {it.history[it.history.length - 1].date}</span>}
+                        <span style={{ color:C.blue, fontSize:20, lineHeight:1 }}>+</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
