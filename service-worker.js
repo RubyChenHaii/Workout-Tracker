@@ -1,63 +1,71 @@
-// 每次部署自動更新版本，避免舊快取殘留
-const CACHE_NAME = 'gymreco-' + Date.now();
+const CACHE_NAME = 'gymreco-v' + Date.now();
 const STATIC_ASSETS = [
-  '.',
-  './index.html',
-  './manifest.json',
-  './favicon.ico',
   './logo192.png',
-  './logo512.png'
+  './logo512.png',
+  './favicon.ico',
+  './manifest.json'
 ];
 
-// 只快取同源請求，避免攔截到外部 API 請求
-const isSameOrigin = (url) => new URL(url).origin === self.location.origin;
+const isSameOrigin=(url)=>new URL(url).origin===self.location.origin;
+const isStaticAsset=(url)=>/\.(png|ico|jpg|svg)$/.test(new URL(url).pathname);
+const isHTML=(url)=>{
+  const p=new URL(url).pathname;
+  return p.endsWith('/')||p.endsWith('.html')||p.endsWith('workout-tracker');
+};
+const isJS=(url)=>/\.js$/.test(new URL(url).pathname);
 
-self.addEventListener('install', event => {
+self.addEventListener('install',event=>{
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME)
+      .then(cache=>cache.addAll(STATIC_ASSETS))
+      .then(()=>self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-self.addEventListener('activate', event => {
+self.addEventListener('activate',event=>{
   event.waitUntil(
-    caches.keys().then(cacheNames =>
-      Promise.all(
-        cacheNames
-          .filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
-      )
-    )
+    caches.keys()
+      .then(names=>Promise.all(
+        names.filter(n=>n!==CACHE_NAME).map(n=>caches.delete(n))
+      ))
+      .then(()=>self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', event => {
-  // 只處理 GET 請求且同源的資源
-  if (event.request.method !== 'GET' || !isSameOrigin(event.request.url)) {
-    return;
-  }
-  // 只快取靜態資源，不快取 API 請求（未來擴充用）
-  const url = new URL(event.request.url);
-  const isStaticAsset = url.pathname.match(/\.(js|css|png|ico|json|html)$/);
-  const isAppRoot = url.pathname === '/' || url.pathname.endsWith('/workout-tracker') || url.pathname.endsWith('/workout-tracker/');
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET') return;
+  if(!isSameOrigin(event.request.url)) return;
 
-  if (!isStaticAsset && !isAppRoot) {
-    return;
-  }
+  const url=event.request.url;
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        // 只快取成功的回應
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+  // HTML 和 JS：網路優先，失敗才用快取（確保總是載入最新版）
+  if(isHTML(url)||isJS(url)){
+    event.respondWith(
+      fetch(event.request)
+        .then(response=>{
+          if(response&&response.status===200){
+            const clone=response.clone();
+            caches.open(CACHE_NAME).then(c=>c.put(event.request,clone));
+          }
           return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
-        return response;
-      });
-    })
-  );
+        })
+        .catch(()=>caches.match(event.request))
+    );
+    return;
+  }
+
+  // 靜態資源（圖示等）：快取優先
+  if(isStaticAsset(url)){
+    event.respondWith(
+      caches.match(event.request)
+        .then(cached=>cached||fetch(event.request)
+          .then(response=>{
+            const clone=response.clone();
+            caches.open(CACHE_NAME).then(c=>c.put(event.request,clone));
+            return response;
+          })
+        )
+    );
+    return;
+  }
 });
