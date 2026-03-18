@@ -1,17 +1,20 @@
 import { useState, useRef } from "react";
-import { useLang } from "../data/i18n.js";
+import { useLang, T } from "../data/i18n.js";
 import { useC } from "../theme.js";
 import { Card, SLabel } from "../components/ui.jsx";
 
+// ── 版本號：每次發布只需改這一行 ──────────────────────────────
+const APP_VERSION = "1.8.0";
+
 export function AboutTab({ workouts, library, onImport }) {
-  const lang = useLang(); const C = useC();
+  const lang = useLang(); const t = T[lang]; const C = useC();
   const isZh = lang === "zh";
   const [importConfirm, setImportConfirm] = useState(null);
   const [importError,   setImportError]   = useState(null);
   const fileInputRef = useRef(null);
 
   const exportJSON = () => {
-    const data = { version:"1.5.1", exportedAt: new Date().toISOString(), workouts, library };
+    const data = { version: APP_VERSION, exportedAt: new Date().toISOString(), workouts, library };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url;
@@ -47,7 +50,28 @@ export function AboutTab({ workouts, library, onImport }) {
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target.result);
-        if (!parsed.workouts || !parsed.library || !Array.isArray(parsed.workouts) || !Array.isArray(parsed.library)) throw new Error("invalid");
+
+        // 第一層：基本結構檢查
+        if (!parsed.workouts || !parsed.library ||
+            !Array.isArray(parsed.workouts) || !Array.isArray(parsed.library)) {
+          throw new Error("invalid");
+        }
+
+        // 第二層：每筆 workout 必須有合法欄位
+        for (const w of parsed.workouts) {
+          if (typeof w.id !== "string" && typeof w.id !== "number") throw new Error("invalid");
+          if (typeof w.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(w.date)) throw new Error("invalid");
+          if (!Array.isArray(w.exercises)) throw new Error("invalid");
+          if (!Array.isArray(w.muscleGroups)) throw new Error("invalid");
+        }
+
+        // 第三層：每筆 library item 必須有合法欄位
+        for (const l of parsed.library) {
+          if (typeof l.id !== "string" && typeof l.id !== "number") throw new Error("invalid");
+          if (typeof l.name !== "string") throw new Error("invalid");
+          if (!Array.isArray(l.history)) throw new Error("invalid");
+        }
+
         setImportConfirm(parsed);
       } catch(err) {
         setImportError(isZh ? "檔案格式不正確，請選擇 GymReco 匯出的 JSON 檔案。" : "Invalid file format. Please select a JSON file exported from GymReco.");
@@ -89,7 +113,7 @@ export function AboutTab({ workouts, library, onImport }) {
             <img src={process.env.PUBLIC_URL + "/logo192.png"} alt="GymReco"
               style={{ width:72, height:72, borderRadius:18, boxShadow:"0 4px 16px rgba(0,0,0,0.15)", objectFit:"cover" }} />
             <div style={{ fontSize:20, fontWeight:700, color:C.text }}>GymReco</div>
-            <div style={{ fontSize:13, color:C.label }}>Version 1.7.0</div>
+            <div style={{ fontSize:13, color:C.label }}>Version {APP_VERSION}</div>
           </div>
         </Card>
 
@@ -135,25 +159,23 @@ export function AboutTab({ workouts, library, onImport }) {
           </div>
         </Card>
 
-        <SLabel>{isZh ? "資料匯出" : "Export Data"}</SLabel>
+        <SLabel>{t.exportTitle}</SLabel>
         <Card style={{ marginBottom:32 }}>
           <div style={{ padding:"14px 16px 6px" }}>
-            <div style={{ fontSize:12, color:C.label, marginBottom:12 }}>
-              {isZh ? "將你的訓練紀錄和動作庫備份到本機" : "Back up your workouts and exercise library"}
-            </div>
+            <div style={{ fontSize:12, color:C.label, marginBottom:12 }}>{t.exportSub}</div>
             <button onClick={exportJSON}
               style={{ width:"100%", padding:"12px 16px", background:C.blue, border:"none", borderRadius:12, color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", marginBottom:10, textAlign:"left", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <div>{isZh ? "匯出 JSON（完整備份）" : "Export JSON (Full Backup)"}</div>
-                <div style={{ fontSize:11, fontWeight:400, opacity:0.8, marginTop:2 }}>{isZh ? "可用於未來還原資料" : "Can be used to restore data later"}</div>
+                <div>{t.exportJSON}</div>
+                <div style={{ fontSize:11, fontWeight:400, opacity:0.8, marginTop:2 }}>{t.exportJSONSub}</div>
               </div>
               <span style={{ fontSize:18 }}>↓</span>
             </button>
             <button onClick={exportCSV}
               style={{ width:"100%", padding:"12px 16px", background:C.f5, border:`1px solid ${C.sep}`, borderRadius:12, color:C.text, fontSize:14, fontWeight:600, cursor:"pointer", marginBottom:10, textAlign:"left", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <div>{isZh ? "匯出 CSV（試算表）" : "Export CSV (Spreadsheet)"}</div>
-                <div style={{ fontSize:11, fontWeight:400, color:C.label, marginTop:2 }}>{isZh ? "可用 Excel 或 Numbers 開啟" : "Open with Excel or Numbers"}</div>
+                <div>{t.exportCSV}</div>
+                <div style={{ fontSize:11, fontWeight:400, color:C.label, marginTop:2 }}>{t.exportCSVSub}</div>
               </div>
               <span style={{ fontSize:18, color:C.label }}>↓</span>
             </button>

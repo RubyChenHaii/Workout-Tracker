@@ -112,7 +112,8 @@ export function DayDetailTab({ dayWorkouts, library, onBack, onOpenLibItem, onEd
   const lang = useLang(); const t = T[lang]; const C = useC();
   if (!dayWorkouts || dayWorkouts.length === 0) return null;
 
-  const sorted = [...dayWorkouts].sort((a, b) => a.id - b.id);
+  // dayWorkouts 從 App.jsx 傳入時已是舊→新順序，直接使用
+  const sorted = dayWorkouts;
   const d = localDate(sorted[0].date);
   const wdLabel = lang === "zh" ? WEEKDAY_CN[d.getDay()] : WEEKDAYS[d.getDay()].slice(0, 3);
   const allMGs = [...new Set(sorted.flatMap(w => w.muscleGroups))];

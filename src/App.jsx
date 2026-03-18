@@ -109,7 +109,7 @@ export default function App() {
                     }} />
               : tab === "daydetail"
                 ? <DayDetailTab
-                    dayWorkouts={workouts.filter(w => w.date === detailDate)}
+                    dayWorkouts={workouts.filter(w => w.date === detailDate).reverse()}
                     library={library}
                     onBack={() => setTab("history")}
                     onOpenLibItem={openLibItem}
