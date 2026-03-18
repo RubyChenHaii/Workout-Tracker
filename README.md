@@ -41,6 +41,12 @@ Then: **Share → Add to Home Screen** for full-screen experience.
 
 ---
 
+## 📸 Screenshots
+
+<img src="public/screenshots/IMG_2559.PNG" width="250"> <img src="public/screenshots/IMG_2560.PNG" width="250"> <img src="public/screenshots/IMG_2561.PNG" width="250">
+
+---
+
 ## 💾 資料儲存說明｜Data Storage Notice
 
 ‼️App 的所有資料儲存於**瀏覽器的 localStorage**，請注意以下情況會導致資料永久消失：
