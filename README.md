@@ -112,7 +112,7 @@ npm run deploy
 
 ## ⛓️ Architecture｜架構 (v1.8.0)
 
-<img src="public/screenshots/architecture.PNG" width="500">
+<img src="public/screenshots/architecture.png" width="500">
 
 ---
 
