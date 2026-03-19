@@ -60,7 +60,14 @@ export default function App() {
 
   const openLibItem        = (id) => { setLibItemId(id); setTab("library"); };
   const handleUpdateWorkout = (updated) => setWorkouts(p => p.map(w => w.id === updated.id ? updated : w));
-  const handleDeleteWorkout = (id) => setWorkouts(p => p.filter(w => w.id !== id));
+  const handleDeleteWorkout = (id) => {
+    setWorkouts(p => p.filter(w => w.id !== id));
+    // library 裡各動作的 history 也同步移除對應的紀錄
+    setLibrary(p => p.map(item => ({
+      ...item,
+      history: item.history.filter(h => h.workoutId !== id),
+    })));
+  };
   const openDayDetail       = (date) => { setDetailDate(date); navigate("daydetail"); };
   const handleEditWorkout   = (id) => { setDetailId(id); navigate("detail"); };
   const handleImport        = (newWorkouts, newLibrary) => {
