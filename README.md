@@ -43,7 +43,7 @@ Then: **Share → Add to Home Screen** for full-screen experience.
 
 ## 📸 Screenshots
 
-<img src="public/screenshots/IMG_2559.PNG" width="200"> <img src="public/screenshots/IMG_2560.PNG" width="200"> <img src="public/screenshots/IMG_2562.PNG" width="200"> <img src="public/screenshots/IMG_2561.PNG" width="200">
+<img src="public/screenshots/IMG_2595.PNG" width="250"> <img src="public/screenshots/IMG_2596.PNG" width="250"> <img src="public/screenshots/IMG_2597.PNG" width="250">
 
 ---
 
