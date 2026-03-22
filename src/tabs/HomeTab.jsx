@@ -70,8 +70,12 @@ function Calendar({ workouts, library, onDayClick }) {
 
 export function HomeTab({ workouts, library, setTab, lang, setLang, darkMode, setDarkMode, openDayDetail }) {
   const t = T[lang]; const C = useC();
-  const now = new Date(), weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
-  const thisWeek = workouts.filter(w => localDate(w.date) >= weekAgo);
+  const now = new Date();
+const startOfWeek = new Date(now);
+startOfWeek.setDate(now.getDate() - now.getDay()); // 回到本週日
+startOfWeek.setHours(0, 0, 0, 0);
+const thisWeek = workouts.filter(w => localDate(w.date) >= startOfWeek);
+
 
   // 最近紀錄：以日為單位，去除同日重複，取最近 3 天
   const recentDates = [...new Set(
