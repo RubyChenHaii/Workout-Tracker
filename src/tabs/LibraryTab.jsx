@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLang, T, MG_EN } from "../data/i18n.js";
 import { MG_OPTIONS, COLOR_OPTS } from "../data/constants.js";
 import { useC } from "../theme.js";
@@ -15,13 +15,18 @@ function LibItemDetail({ item, onUpdate, onDelete, onBack }) {
   const [editColor,   setEditColor]   = useState(item.color);
   const [editingMeta, setEM]          = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const saveTimer = useRef(null);  // 新增這行
 
   const noteDirty = editNote !== item.note;
   const metaDirty = editName !== item.name || editMG !== item.muscleGroup || editColor !== item.color;
   const anyDirty  = noteDirty || metaDirty;
 
   const save = () => {
-    onUpdate({ ...item, note: editNote, name: editName, muscleGroup: editMG, color: editColor });
+    // 延遲到下一個 tick，避免 setState 阻塞主執行緒
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      onUpdate({ ...item, note: editNote, name: editName, muscleGroup: editMG, color: editColor });
+    }, 0);
   };
 
   const mgLabel = lang === "en" ? MG_EN[editMG] || editMG : editMG;
@@ -112,8 +117,14 @@ function LibItemDetail({ item, onUpdate, onDelete, onBack }) {
         <Card style={{ marginBottom:16 }}>
           <div style={{ padding:"14px 16px" }}>
             <div style={{ fontSize:11, color:C.label, marginBottom:8 }}>{t.libNoteSub}</div>
-            <textarea value={editNote} onChange={e => setEditNote(e.target.value)} placeholder={t.libNotePlaceholder}
-              style={{ width:"100%", background:"none", border:"none", fontSize:14, color:C.sub, resize:"none", minHeight:140, boxSizing:"border-box", outline:"none", fontFamily:"inherit", lineHeight:1.7 }} />
+            <textarea value={editNote} onChange={e => setEditNote(e.target.value)}
+              placeholder={t.libNotePlaceholder}
+              style={{ width:"100%", background:"none", border:"none", fontSize:14,
+                color:C.sub, resize:"none", boxSizing:"border-box", outline:"none",
+                fontFamily:"inherit", lineHeight:1.7,
+                height:"auto", minHeight:80, overflow:"hidden" }}
+            onInput={e => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
+            />
           </div>
           {noteDirty && (
             <div style={{ padding:"0 16px 14px" }}>
