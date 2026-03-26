@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLang, T, MG_EN } from "../data/i18n.js";
 import { MG_OPTIONS, COLOR_OPTS } from "../data/constants.js";
 import { useC } from "../theme.js";
@@ -15,7 +15,17 @@ function LibItemDetail({ item, onUpdate, onDelete, onBack }) {
   const [editColor,   setEditColor]   = useState(item.color);
   const [editingMeta, setEM]          = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const saveTimer = useRef(null);  // 新增這行
+  const saveTimer = useRef(null);
+  const noteRef   = useRef(null);
+
+  // 每次 editNote 改變（包含初始 mount）都重新計算高度
+  useEffect(() => {
+    if (noteRef.current) {
+      noteRef.current.style.height = "auto";
+      noteRef.current.style.height = noteRef.current.scrollHeight + "px";
+    }
+  }, [editNote]);
+
 
   const noteDirty = editNote !== item.note;
   const metaDirty = editName !== item.name || editMG !== item.muscleGroup || editColor !== item.color;
@@ -117,13 +127,15 @@ function LibItemDetail({ item, onUpdate, onDelete, onBack }) {
         <Card style={{ marginBottom:16 }}>
           <div style={{ padding:"14px 16px" }}>
             <div style={{ fontSize:11, color:C.label, marginBottom:8 }}>{t.libNoteSub}</div>
-            <textarea value={editNote} onChange={e => setEditNote(e.target.value)}
+            <textarea
+              ref={noteRef}
+              value={editNote}
+              onChange={e => setEditNote(e.target.value)}
               placeholder={t.libNotePlaceholder}
               style={{ width:"100%", background:"none", border:"none", fontSize:14,
                 color:C.sub, resize:"none", boxSizing:"border-box", outline:"none",
-                fontFamily:"inherit", lineHeight:1.7,
-                height:"auto", minHeight:80, overflow:"hidden" }}
-            onInput={e => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
+                fontFamily:"inherit", lineHeight:1.7, display:"block", overflow:"hidden",
+                minHeight:"80px" }}
             />
           </div>
           {noteDirty && (
